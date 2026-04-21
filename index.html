@@ -1,10 +1,463 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>My Site</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pixel Rogue</title>
+  <style>
+    :root {
+      --bg: #0a0a10;
+      --panel: #161624;
+      --ink: #e8e6ff;
+      --muted: #9a97c9;
+      --accent: #84f6a6;
+      --danger: #ff758f;
+      --gold: #ffd166;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      gap: 14px;
+      font-family: "Courier New", Courier, monospace;
+      background: radial-gradient(circle at 20% 20%, #1b1b31, var(--bg) 55%);
+      color: var(--ink);
+      padding: 16px;
+    }
+
+    .frame {
+      border: 2px solid #4b4896;
+      background: #0f0f19;
+      box-shadow: 0 0 0 4px #0c0c15, 0 12px 30px rgba(0, 0, 0, 0.5);
+      padding: 10px;
+      border-radius: 6px;
+    }
+
+    canvas {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      width: min(92vw, 840px);
+      height: auto;
+      border: 2px solid #2f2d62;
+      background: #06060b;
+      display: block;
+    }
+
+    .hud {
+      width: min(92vw, 840px);
+      display: grid;
+      gap: 8px;
+      background: var(--panel);
+      border: 2px solid #2f2d62;
+      border-radius: 6px;
+      padding: 10px;
+    }
+
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      font-size: 14px;
+    }
+
+    .log {
+      min-height: 42px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .hint { font-size: 12px; color: #b8b5e9; }
+    .health { color: var(--accent); }
+    .danger { color: var(--danger); }
+    .gold { color: var(--gold); }
+  </style>
 </head>
 <body>
-  <h1>Hello</h1>
-  <p>Your site is working.</p>
+  <div class="frame">
+    <canvas id="game" width="672" height="432" aria-label="Rogue-like game board"></canvas>
+  </div>
+
+  <section class="hud" aria-live="polite">
+    <div class="stats">
+      <span>HP: <strong id="hp" class="health"></strong></span>
+      <span>Atk: <strong id="atk"></strong></span>
+      <span>Floor: <strong id="floor"></strong></span>
+      <span>Gold: <strong id="gold" class="gold"></strong></span>
+      <span>Enemies: <strong id="enemies" class="danger"></strong></span>
+    </div>
+    <div class="log" id="log"></div>
+    <div class="hint">Move: WASD / Arrow keys · Wait: Space · Reach the <span class="gold">gold stairs</span> to descend.</div>
+  </section>
+
+  <script>
+    const tileSize = 24;
+    const cols = 28;
+    const rows = 18;
+
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const ui = {
+      hp: document.getElementById("hp"),
+      atk: document.getElementById("atk"),
+      floor: document.getElementById("floor"),
+      gold: document.getElementById("gold"),
+      enemies: document.getElementById("enemies"),
+      log: document.getElementById("log"),
+    };
+
+    const COLORS = {
+      wall: "#1f1f3b",
+      floor: "#2f2f4f",
+      floorShade: "#3a3a61",
+      player: "#84f6a6",
+      enemy: "#ff758f",
+      coin: "#ffd166",
+      potion: "#7bdff2",
+      stairs: "#ffcf5c",
+      shadow: "rgba(0,0,0,0.3)",
+      fog: "rgba(4,4,10,0.55)"
+    };
+
+    const state = {
+      floor: 1,
+      map: [],
+      rooms: [],
+      coins: [],
+      potions: [],
+      enemies: [],
+      stairs: null,
+      player: { x: 2, y: 2, hp: 24, maxHp: 24, atk: 5, gold: 0 },
+      message: "Enter the dungeon.",
+      over: false,
+    };
+
+    function rnd(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function key(x, y) {
+      return `${x},${y}`;
+    }
+
+    function carveRoom(room) {
+      for (let y = room.y; y < room.y + room.h; y++) {
+        for (let x = room.x; x < room.x + room.w; x++) {
+          state.map[y][x] = 0;
+        }
+      }
+    }
+
+    function carveCorridor(x1, y1, x2, y2) {
+      let x = x1;
+      let y = y1;
+      while (x !== x2) {
+        state.map[y][x] = 0;
+        x += x < x2 ? 1 : -1;
+      }
+      while (y !== y2) {
+        state.map[y][x] = 0;
+        y += y < y2 ? 1 : -1;
+      }
+      state.map[y][x] = 0;
+    }
+
+    function intersects(a, b) {
+      return !(a.x + a.w + 1 < b.x || b.x + b.w + 1 < a.x || a.y + a.h + 1 < b.y || b.y + b.h + 1 < a.y);
+    }
+
+    function randomFloorTile(room) {
+      return {
+        x: rnd(room.x + 1, room.x + room.w - 2),
+        y: rnd(room.y + 1, room.y + room.h - 2),
+      };
+    }
+
+    function buildFloor() {
+      state.map = Array.from({ length: rows }, () => Array(cols).fill(1));
+      state.rooms = [];
+      state.coins = [];
+      state.potions = [];
+      state.enemies = [];
+      state.stairs = null;
+
+      const roomCount = rnd(8, 12);
+      for (let i = 0; i < roomCount; i++) {
+        const room = { x: rnd(1, cols - 8), y: rnd(1, rows - 7), w: rnd(4, 8), h: rnd(4, 6) };
+        if (room.x + room.w >= cols - 1 || room.y + room.h >= rows - 1) continue;
+
+        let overlaps = false;
+        for (const existing of state.rooms) {
+          if (intersects(room, existing)) {
+            overlaps = true;
+            break;
+          }
+        }
+        if (overlaps) continue;
+
+        carveRoom(room);
+        if (state.rooms.length > 0) {
+          const prev = state.rooms[state.rooms.length - 1];
+          carveCorridor(prev.cx, prev.cy, room.x + Math.floor(room.w / 2), room.y + Math.floor(room.h / 2));
+        }
+        room.cx = room.x + Math.floor(room.w / 2);
+        room.cy = room.y + Math.floor(room.h / 2);
+        state.rooms.push(room);
+      }
+
+      if (!state.rooms.length) return buildFloor();
+
+      const startRoom = state.rooms[0];
+      const start = randomFloorTile(startRoom);
+      state.player.x = start.x;
+      state.player.y = start.y;
+
+      const endRoom = state.rooms[state.rooms.length - 1];
+      state.stairs = randomFloorTile(endRoom);
+
+      const occupied = new Set([key(state.player.x, state.player.y), key(state.stairs.x, state.stairs.y)]);
+
+      const enemyCount = 3 + state.floor * 2;
+      for (let i = 0; i < enemyCount; i++) {
+        const room = state.rooms[rnd(1, state.rooms.length - 1)] || state.rooms[0];
+        let tries = 0;
+        while (tries++ < 40) {
+          const pos = randomFloorTile(room);
+          const k = key(pos.x, pos.y);
+          if (occupied.has(k)) continue;
+          occupied.add(k);
+          state.enemies.push({ x: pos.x, y: pos.y, hp: 6 + state.floor * 2, atk: 2 + Math.floor(state.floor / 2) });
+          break;
+        }
+      }
+
+      const coinCount = 5 + state.floor;
+      for (let i = 0; i < coinCount; i++) {
+        const room = state.rooms[rnd(0, state.rooms.length - 1)];
+        let tries = 0;
+        while (tries++ < 40) {
+          const pos = randomFloorTile(room);
+          const k = key(pos.x, pos.y);
+          if (occupied.has(k)) continue;
+          occupied.add(k);
+          state.coins.push(pos);
+          break;
+        }
+      }
+
+      const potionCount = Math.max(1, Math.floor(state.floor / 2));
+      for (let i = 0; i < potionCount; i++) {
+        const room = state.rooms[rnd(0, state.rooms.length - 1)];
+        let tries = 0;
+        while (tries++ < 40) {
+          const pos = randomFloorTile(room);
+          const k = key(pos.x, pos.y);
+          if (occupied.has(k)) continue;
+          occupied.add(k);
+          state.potions.push(pos);
+          break;
+        }
+      }
+    }
+
+    function inBounds(x, y) {
+      return x >= 0 && y >= 0 && x < cols && y < rows;
+    }
+
+    function isWalkable(x, y) {
+      return inBounds(x, y) && state.map[y][x] === 0;
+    }
+
+    function enemyAt(x, y) {
+      return state.enemies.find((e) => e.x === x && e.y === y);
+    }
+
+    function distance(a, b) {
+      return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+    }
+
+    function setMessage(msg) {
+      state.message = msg;
+      ui.log.textContent = msg;
+    }
+
+    function playerAttack(enemy) {
+      const dmg = rnd(state.player.atk - 1, state.player.atk + 2);
+      enemy.hp -= Math.max(1, dmg);
+      if (enemy.hp <= 0) {
+        state.enemies = state.enemies.filter((e) => e !== enemy);
+        state.player.gold += rnd(2, 6);
+        setMessage(`You defeat a slime and loot coins.`);
+      } else {
+        setMessage(`You hit for ${dmg} damage.`);
+      }
+    }
+
+    function tryMove(dx, dy) {
+      if (state.over) return;
+
+      const nx = state.player.x + dx;
+      const ny = state.player.y + dy;
+      if (!isWalkable(nx, ny)) {
+        setMessage("You bump into rough stone.");
+        enemyTurn();
+        return;
+      }
+
+      const foe = enemyAt(nx, ny);
+      if (foe) {
+        playerAttack(foe);
+        enemyTurn();
+        return;
+      }
+
+      state.player.x = nx;
+      state.player.y = ny;
+
+      const coinIndex = state.coins.findIndex((c) => c.x === nx && c.y === ny);
+      if (coinIndex !== -1) {
+        state.coins.splice(coinIndex, 1);
+        const amount = rnd(1, 4);
+        state.player.gold += amount;
+        setMessage(`You pick up ${amount} gold.`);
+      }
+
+      const potionIndex = state.potions.findIndex((p) => p.x === nx && p.y === ny);
+      if (potionIndex !== -1) {
+        state.potions.splice(potionIndex, 1);
+        const heal = rnd(5, 9);
+        state.player.hp = Math.min(state.player.maxHp, state.player.hp + heal);
+        setMessage(`You drink a potion (+${heal} HP).`);
+      }
+
+      if (state.stairs.x === nx && state.stairs.y === ny) {
+        state.floor += 1;
+        state.player.atk += 1;
+        state.player.maxHp += 2;
+        state.player.hp = Math.min(state.player.maxHp, state.player.hp + 4);
+        setMessage(`You descend to floor ${state.floor}.`);
+        buildFloor();
+      }
+
+      enemyTurn();
+    }
+
+    function enemyTurn() {
+      if (state.over) return;
+      for (const enemy of state.enemies) {
+        const dist = distance(enemy, state.player);
+        if (dist === 1) {
+          const dmg = rnd(enemy.atk - 1, enemy.atk + 1);
+          state.player.hp -= Math.max(1, dmg);
+          if (state.player.hp <= 0) {
+            state.player.hp = 0;
+            state.over = true;
+            setMessage("You were slain. Refresh to try again.");
+            break;
+          }
+          setMessage(`A slime claws you for ${dmg}.`);
+          continue;
+        }
+
+        if (dist > 7) continue;
+
+        let dx = 0;
+        let dy = 0;
+        if (Math.abs(state.player.x - enemy.x) > Math.abs(state.player.y - enemy.y)) {
+          dx = state.player.x > enemy.x ? 1 : -1;
+        } else {
+          dy = state.player.y > enemy.y ? 1 : -1;
+        }
+
+        const tx = enemy.x + dx;
+        const ty = enemy.y + dy;
+        const blocked = !isWalkable(tx, ty) || enemyAt(tx, ty) || (state.player.x === tx && state.player.y === ty);
+        if (!blocked) {
+          enemy.x = tx;
+          enemy.y = ty;
+        }
+      }
+    }
+
+    function drawTile(x, y, color) {
+      const px = x * tileSize;
+      const py = y * tileSize;
+      ctx.fillStyle = color;
+      ctx.fillRect(px, py, tileSize, tileSize);
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          if (state.map[y][x] === 1) drawTile(x, y, COLORS.wall);
+          else drawTile(x, y, (x + y) % 2 ? COLORS.floor : COLORS.floorShade);
+        }
+      }
+
+      for (const c of state.coins) drawTile(c.x, c.y, COLORS.coin);
+      for (const p of state.potions) drawTile(p.x, p.y, COLORS.potion);
+      drawTile(state.stairs.x, state.stairs.y, COLORS.stairs);
+      for (const e of state.enemies) drawTile(e.x, e.y, COLORS.enemy);
+      drawTile(state.player.x, state.player.y, COLORS.player);
+
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const d = Math.abs(x - state.player.x) + Math.abs(y - state.player.y);
+          if (d > 7) {
+            ctx.fillStyle = COLORS.fog;
+            ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+          }
+        }
+      }
+
+      ui.hp.textContent = `${state.player.hp}/${state.player.maxHp}`;
+      ui.atk.textContent = state.player.atk;
+      ui.floor.textContent = state.floor;
+      ui.gold.textContent = state.player.gold;
+      ui.enemies.textContent = state.enemies.length;
+
+      if (state.over) {
+        ctx.fillStyle = COLORS.shadow;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 24px Courier New";
+        ctx.fillText("GAME OVER", canvas.width / 2 - 70, canvas.height / 2 - 4);
+        ctx.font = "14px Courier New";
+        ctx.fillText("Refresh page to restart", canvas.width / 2 - 90, canvas.height / 2 + 24);
+      }
+    }
+
+    function loop() {
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    window.addEventListener("keydown", (e) => {
+      const k = e.key.toLowerCase();
+      if (["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d", " "].includes(k)) {
+        e.preventDefault();
+      }
+
+      if (k === "arrowup" || k === "w") tryMove(0, -1);
+      if (k === "arrowdown" || k === "s") tryMove(0, 1);
+      if (k === "arrowleft" || k === "a") tryMove(-1, 0);
+      if (k === "arrowright" || k === "d") tryMove(1, 0);
+      if (k === " ") {
+        setMessage("You wait and listen...");
+        enemyTurn();
+      }
+    });
+
+    buildFloor();
+    setMessage("Find loot and take the stairs deeper.");
+    loop();
+  </script>
 </body>
 </html>
