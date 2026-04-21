@@ -497,7 +497,7 @@
       state.stairs = randomFloorTile(state.rooms[state.rooms.length - 1]);
       const occupied = new Set([key(state.player.x, state.player.y), key(state.stairs.x, state.stairs.y)]);
 
-      const enemyCount = 8 + Math.floor(state.floor * 2.1);
+      const enemyCount = 2 + Math.floor(state.floor * 1.1);
       for (let i = 0; i < enemyCount; i++) placeEnemy(occupied, false);
 
       if (state.floor % 5 === 0) state.bossAlive = true;
