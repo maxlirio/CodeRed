@@ -16,8 +16,22 @@ import * as drain from "./drain.js";
 import * as thorn from "./thorn.js";
 import * as blink from "./blink.js";
 import * as echo from "./echo.js";
+import * as shieldwall from "./shieldwall.js";
+import * as cleave from "./cleave.js";
+import * as warcry from "./warcry.js";
+import * as arcanemissile from "./arcanemissile.js";
+import * as glacialprison from "./glacialprison.js";
+import * as firewall from "./firewall.js";
+import * as huntersmark from "./huntersmark.js";
+import * as trapwire from "./trapwire.js";
+import * as vault from "./vault.js";
 
-const MODULES = [bolt, chain, nova, ember, meteor, frost, pull, mend, drain, thorn, blink, echo];
+const MODULES = [
+  bolt, chain, nova, ember, meteor, frost, pull, mend, drain, thorn, blink, echo,
+  shieldwall, cleave, warcry,
+  arcanemissile, glacialprison, firewall,
+  huntersmark, trapwire, vault
+];
 
 export const SPELL_LIBRARY = MODULES.map((m) => m.meta);
 export const SPELL_BY_ID = Object.fromEntries(SPELL_LIBRARY.map((s) => [s.id, s]));

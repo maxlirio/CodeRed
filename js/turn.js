@@ -6,8 +6,8 @@ import {
   hasStatus
 } from "./fx.js";
 import {
-  playerAttack, clearDeadEnemies,
-  tickStatuses, tickFloorEffects, triggerMine
+  playerAttack, clearDeadEnemies, playerTakeDamage,
+  tickStatuses, tickFloorEffects, triggerMine, triggerTrap
 } from "./combat.js";
 import { rankOf } from "./spells/index.js";
 import { equipWeapon, recalcAttack, generateAiLoot } from "./items.js";
@@ -158,6 +158,8 @@ function enemyStepToward(enemy) {
   enemy.y = ty;
   const mine = state.floorEffects.find((f) => f.kind === "mine" && f.x === enemy.x && f.y === enemy.y && f.turns > 0);
   if (mine) triggerMine(mine);
+  const trap = state.floorEffects.find((f) => f.kind === "trap" && f.x === enemy.x && f.y === enemy.y && f.turns > 0);
+  if (trap) triggerTrap(trap, enemy);
 }
 
 export function enemyTurn() {
@@ -182,8 +184,8 @@ export function enemyTurn() {
 
     const dist = distance(enemy, state.player);
     if (dist === 1) {
-      const dmg = Math.max(1, rnd(enemy.atk - 1, enemy.atk + 1) + atkMod);
-      state.player.hp -= dmg;
+      const raw = Math.max(1, rnd(enemy.atk - 1, enemy.atk + 1) + atkMod);
+      const dmg = playerTakeDamage(raw);
       spawnBurst(state.player.x, state.player.y, "#ff758f", 7);
       if (state.player.hp <= 0) {
         state.player.hp = 0;
@@ -220,9 +222,10 @@ export function chooseClass(c, opts = {}) {
   state.stats = { kills: 0, bossKills: 0, spellsCast: 0, goldEarned: 0, floorsCleared: 0, floorLog: [] };
   state.player.gold = 0;
   state.player.inventory = [];
-  state.player.knownSpells = new Set(["bolt", "nova", "mend"]);
-  state.player.spellRanks = { bolt: 1, nova: 1, mend: 1 };
-  state.player.spellSlots = { z: "bolt", x: "nova", c: "mend", v: null };
+  const starts = c.startSpells || ["bolt", "nova", "mend"];
+  state.player.knownSpells = new Set(starts);
+  state.player.spellRanks = Object.fromEntries(starts.map((id) => [id, 1]));
+  state.player.spellSlots = { z: starts[0] || null, x: starts[1] || null, c: starts[2] || null, v: starts[3] || null };
   state.player.statuses = [];
   state.player.lastOffensive = null;
 

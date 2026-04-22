@@ -68,6 +68,16 @@ function drawFloorEffects() {
       const pulse = Math.floor(Math.sin(Date.now() / 180) * 80 + 140);
       ctx.fillStyle = `rgb(${pulse + 60},${Math.max(0, pulse - 40)},30)`;
       ctx.fillRect(px + tileSize / 2 - 3, py + tileSize / 2 - 3, 6, 6);
+    } else if (f.kind === "trap") {
+      const pulse = 0.4 + 0.3 * Math.sin(Date.now() / 240 + (f.x + f.y));
+      ctx.strokeStyle = `rgba(132,246,166,${pulse})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(px + 2, py + tileSize - 2);
+      ctx.lineTo(px + tileSize - 2, py + 2);
+      ctx.moveTo(px + 2, py + 2);
+      ctx.lineTo(px + tileSize - 2, py + tileSize - 2);
+      ctx.stroke();
     }
   }
 }

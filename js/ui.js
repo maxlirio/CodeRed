@@ -77,7 +77,12 @@ export function renderClassChoices() {
   for (const c of CLASS_OPTIONS) {
     const btn = document.createElement("button");
     btn.className = "choice";
-    btn.innerHTML = `<strong>${c.name}</strong><span>HP ${c.hp}, MP ${c.mana}, ATK ${c.atk}, Weapon ${c.weapon}</span>`;
+    const starts = (c.startSpells || [])
+      .map((id) => SPELL_BY_ID[id])
+      .filter(Boolean)
+      .map((s) => `<span style="color:${SCHOOL_COLORS[s.school]}">${s.name}</span>`)
+      .join(" · ");
+    btn.innerHTML = `<strong>${c.name}</strong><span>HP ${c.hp}, MP ${c.mana}, ATK ${c.atk}, Weapon ${c.weapon}</span>${starts ? `<span>${starts}</span>` : ""}`;
     btn.addEventListener("click", () => {
       const heroName = heroNameInput.value.trim() || suggestName();
       chooseClass(c, { heroName });

@@ -33,10 +33,21 @@ export function damageEnemy(enemy, amount, school) {
     for (const n of state.enemies) if (n !== enemy && distance(n, enemy) <= 1) applyStatus(n, "shock", 2, 1);
     spawnBurst(enemy.x, enemy.y, "#ffffff", 8);
   }
+  if (hasStatus(enemy, "mark")) m *= 1.5;
   const dealt = Math.max(0, Math.floor(amount * m));
   enemy.hp -= dealt;
+  if (dealt > 0 && hasStatus(enemy, "mark")) {
+    state.player.mana = Math.min(state.player.maxMana, state.player.mana + 1);
+  }
   if (shatter) setMessage(`SHATTER! ${enemy.name} takes ${dealt} ${school}.`);
   return dealt;
+}
+
+export function playerTakeDamage(amount) {
+  const ward = state.player.statuses && state.player.statuses.find((s) => s.kind === "ward");
+  const reduced = ward ? Math.max(1, Math.floor(amount * (1 - ward.power / 100))) : amount;
+  state.player.hp -= reduced;
+  return reduced;
 }
 
 export function clearDeadEnemies() {
@@ -152,7 +163,11 @@ export function damageAdjacentEnemies(amount, color) {
 export function tickStatuses(t) {
   if (!t.statuses || !t.statuses.length) return;
   for (const s of t.statuses) {
-    if (s.kind === "burn") { t.hp -= s.power; spawnBurst(t.x, t.y, STATUS_DEFS.burn.color, 3); }
+    if (s.kind === "burn") {
+      if (t === state.player) playerTakeDamage(s.power);
+      else t.hp -= s.power;
+      spawnBurst(t.x, t.y, STATUS_DEFS.burn.color, 3);
+    }
     if (s.kind === "regen" && t === state.player) {
       t.hp = Math.min(t.maxHp, t.hp + s.power);
       spawnBurst(t.x, t.y, STATUS_DEFS.regen.color, 3);
@@ -168,7 +183,7 @@ export function tickFloorEffects() {
       const e = enemyAt(f.x, f.y);
       if (e) { e.hp -= f.power; applyStatus(e, "burn", 2, f.power); spawnBurst(f.x, f.y, STATUS_DEFS.burn.color, 2); }
       if (state.player.x === f.x && state.player.y === f.y) {
-        state.player.hp -= f.power; spawnBurst(f.x, f.y, STATUS_DEFS.burn.color, 2);
+        playerTakeDamage(f.power); spawnBurst(f.x, f.y, STATUS_DEFS.burn.color, 2);
       }
     }
     if (f.kind === "mine") {
@@ -176,9 +191,22 @@ export function tickFloorEffects() {
       const onMine = e || (state.player.x === f.x && state.player.y === f.y);
       if (onMine) triggerMine(f);
     }
+    if (f.kind === "trap") {
+      const e = enemyAt(f.x, f.y);
+      if (e) triggerTrap(f, e);
+    }
     f.turns -= 1;
   }
   state.floorEffects = state.floorEffects.filter((f) => f.turns > 0);
+}
+
+export function triggerTrap(f, enemy) {
+  const pow = state.player.spellPower + Math.floor(state.floor / 4);
+  damageEnemy(enemy, 5 + pow, "life");
+  applyStatus(enemy, "stun", 1, 1);
+  spawnBurst(f.x, f.y, "#84f6a6", 12);
+  f.turns = 0;
+  clearDeadEnemies();
 }
 
 export function triggerMine(f) {

@@ -18,9 +18,12 @@ export const COLORS = {
 };
 
 export const CLASS_OPTIONS = [
-  { name: "Knight", hp: 36, mana: 10, atk: 6, spellPower: 1, weapon: "Iron Longsword" },
-  { name: "Mage",   hp: 24, mana: 20, atk: 4, spellPower: 4, weapon: "Rune Staff" },
-  { name: "Ranger", hp: 29, mana: 14, atk: 5, spellPower: 2, weapon: "Hunter Spear" }
+  { name: "Knight", hp: 36, mana: 10, atk: 6, spellPower: 1, weapon: "Iron Longsword",
+    startSpells: ["shieldwall", "cleave", "warcry"] },
+  { name: "Mage",   hp: 24, mana: 20, atk: 4, spellPower: 4, weapon: "Rune Staff",
+    startSpells: ["arcanemissile", "glacialprison", "firewall"] },
+  { name: "Ranger", hp: 29, mana: 14, atk: 5, spellPower: 2, weapon: "Hunter Spear",
+    startSpells: ["huntersmark", "trapwire", "vault"] }
 ];
 
 export const WEAPON_POOL = [
@@ -91,5 +94,7 @@ export const STATUS_DEFS = {
   chill: { tag: "C", color: "#7dd3ff" },
   shock: { tag: "S", color: "#c79bff" },
   stun:  { tag: "Z", color: "#ffffff" },
-  regen: { tag: "+", color: "#84f6a6" }
+  regen: { tag: "+", color: "#84f6a6" },
+  ward:  { tag: "W", color: "#7bdff2" },
+  mark:  { tag: "M", color: "#fca5ff" }
 };
