@@ -1,17 +1,18 @@
 import { state } from "./state.js";
 import { rnd, pick, setMessage } from "./utils.js";
+import { srnd, spick } from "./rng.js";
 import { damageNearestEnemy, damageAdjacentEnemies } from "./combat.js";
 
 function makeRelicName() {
   const { left, mid, right } = state.runSeedWords;
-  return `${pick(left)} ${pick(mid)} ${pick(right)}`;
+  return `${spick(left)} ${spick(mid)} ${spick(right)}`;
 }
 
 function randomRoomTile() {
-  const room = pick(state.rooms);
+  const room = spick(state.rooms);
   return {
-    x: rnd(room.x + 1, room.x + room.w - 2),
-    y: rnd(room.y + 1, room.y + room.h - 2)
+    x: srnd(room.x + 1, room.x + room.w - 2),
+    y: srnd(room.y + 1, room.y + room.h - 2)
   };
 }
 
@@ -45,7 +46,7 @@ const RELIC_EFFECTS = [
 ];
 
 export function makeRelic(floorLevel) {
-  const effect = pick(RELIC_EFFECTS);
+  const effect = spick(RELIC_EFFECTS);
   return {
     name: makeRelicName(),
     desc: effect.desc,

@@ -43,8 +43,11 @@ export function clearDeadEnemies() {
   let killedBoss = false;
   state.enemies = state.enemies.filter((enemy) => {
     if (enemy.hp > 0) return true;
-    if (enemy.boss) killedBoss = true;
-    state.player.gold += enemy.boss ? rnd(18, 30) : rnd(2, 7);
+    if (enemy.boss) { killedBoss = true; state.stats.bossKills += 1; }
+    state.stats.kills += 1;
+    const gold = enemy.boss ? rnd(18, 30) : rnd(2, 7);
+    state.player.gold += gold;
+    state.stats.goldEarned += gold;
     spawnBurst(enemy.x, enemy.y, enemy.boss ? "#ff5dc1" : "#ffd166", 12);
     return false;
   });
@@ -65,8 +68,12 @@ export function playerAttack(enemy) {
   if (rolled.type === "miss") setMessage("You miss!");
   if (rolled.type === "crit") setMessage(`Critical hit! ${dmg} damage.`);
   if (enemy.hp <= 0) {
-    state.player.gold += enemy.boss ? rnd(18, 30) : rnd(3, 8);
+    const gold = enemy.boss ? rnd(18, 30) : rnd(3, 8);
+    state.player.gold += gold;
+    state.stats.goldEarned += gold;
+    state.stats.kills += 1;
     if (enemy.boss) {
+      state.stats.bossKills += 1;
       setMessage(`You slay ${enemy.name}, floor boss!`);
       narrateCombat(`Boss ${enemy.name} collapses after a brutal strike.`);
       state.bossAlive = false;

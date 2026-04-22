@@ -18,26 +18,33 @@ const MOVE_KEYS = {
 const HOTKEYS = new Set([
   "arrowup", "arrowdown", "arrowleft", "arrowright",
   "w", "a", "s", "d", " ",
-  "z", "x", "c", "v", "f", "n", "b",
+  "z", "x", "c", "v", "f", "n", "b", "?",
   "1", "2", "3", "4", "5", "6", "escape"
 ]);
 
-function castFromSlot(k, e) {
+// touch-only "charged" toggle. On desktop we use physical Shift; on mobile the
+// user taps the charged button to arm before selecting a slot.
+let touchCharged = false;
+
+const tutorialOverlay = document.getElementById("tutorialOverlay");
+const touchChargedBtn = document.getElementById("touchCharged");
+
+function castFromSlot(k, { charged = false } = {}) {
   const slotId = state.player.spellSlots[k];
   const spell = slotId && state.player.knownSpells.has(slotId) ? SPELL_BY_ID[slotId] : null;
   if (!spell) {
     setMessage(`Slot ${k.toUpperCase()} is empty. Open backpack (B) to assign.`);
     return;
   }
-  const charged = e.shiftKey;
   const cost = Math.ceil(spell.cost * (charged ? 1.5 : 1));
   if (spell.targeting === "self" || spell.targeting === "adjacent") {
     if (state.player.mana < cost) { setMessage("Not enough mana."); return; }
     const res = castSpell(spell, state.player.x, state.player.y, { charged });
     if (res.acted) { spendSpellMana(spell, charged); enemyTurn(); }
+    if (charged) setTouchCharged(false);
   } else {
     state.aimMode = { kind: "spell", spell, name: spell.name, charged };
-    setMessage(`${charged ? "CHARGED " : ""}Aiming ${spell.name}. Click tile${charged ? "" : " (hold Shift = charged)"}.`);
+    setMessage(`${charged ? "CHARGED " : ""}Aiming ${spell.name}. ${charged ? "" : "Hold Shift / tap CHARGED for 1.5×."} Click/tap tile.`);
   }
 }
 
@@ -60,15 +67,34 @@ function toggleAi() {
   setMessage(`AI narration ${state.aiEnabled ? "enabled" : "disabled"}.`);
 }
 
+function toggleTutorial(force) {
+  const open = typeof force === "boolean" ? force : tutorialOverlay.classList.contains("hidden");
+  tutorialOverlay.classList.toggle("hidden", !open);
+}
+
+function setTouchCharged(v) {
+  touchCharged = v;
+  if (touchChargedBtn) {
+    touchChargedBtn.textContent = `charged ${v ? "ON" : "OFF"}`;
+    touchChargedBtn.classList.toggle("lit", v);
+  }
+}
+
 function onKeyDown(e) {
-  if (document.activeElement === ui.bossInput && e.key !== "Escape") return;
+  // allow typing in any input field without stealing keys
+  if (document.activeElement && document.activeElement.tagName === "INPUT" && e.key !== "Escape") return;
+
   const k = e.key.toLowerCase();
   if (HOTKEYS.has(k)) e.preventDefault();
+
+  // ? works at any time (including during boss battle) to read rules
+  if (k === "?") { toggleTutorial(); return; }
+
   if (state.bossBattle && k !== "escape") return;
 
   if (MOVE_KEYS[k]) { tryMove(...MOVE_KEYS[k]); return; }
 
-  if (["z", "x", "c", "v"].includes(k)) castFromSlot(k, e);
+  if (["z", "x", "c", "v"].includes(k)) castFromSlot(k, { charged: e.shiftKey });
 
   if (k === "f") {
     if (state.player.weaponType === "bow") {
@@ -87,6 +113,7 @@ function onKeyDown(e) {
     state.aimMode = null;
     state.backpackOpen = false;
     ui.backpackOverlay.classList.add("hidden");
+    if (!tutorialOverlay.classList.contains("hidden")) toggleTutorial(false);
   }
 
   if (["1", "2", "3", "4", "5", "6"].includes(k)) useRelic(Number(k) - 1);
@@ -113,7 +140,7 @@ function onCanvasClick(e) {
     acted = rangedAttackAt(state.mouseTile.x, state.mouseTile.y);
   } else if (state.aimMode.kind === "spell") {
     const spell = state.aimMode.spell;
-    const charged = state.aimMode.charged || e.shiftKey;
+    const charged = state.aimMode.charged || e.shiftKey || touchCharged;
     const cost = Math.ceil(spell.cost * (charged ? 1.5 : 1));
     if (state.player.mana < cost) {
       setMessage("Not enough mana.");
@@ -128,19 +155,107 @@ function onCanvasClick(e) {
     }
     const res = castSpell(spell, state.mouseTile.x, state.mouseTile.y, { charged });
     acted = !!res.acted;
-    if (acted) spendSpellMana(spell, charged);
+    if (acted) { spendSpellMana(spell, charged); if (charged) setTouchCharged(false); }
   }
   state.aimMode = null;
   if (acted) enemyTurn();
 }
 
+// Canvas touch support: map touch → the same tile under the finger so aiming works.
+function onCanvasTouchEnd(e) {
+  if (!e.changedTouches || !e.changedTouches[0]) return;
+  const t = e.changedTouches[0];
+  const rect = canvas.getBoundingClientRect();
+  const sx = canvas.width / rect.width;
+  const sy = canvas.height / rect.height;
+  const tx = Math.floor(((t.clientX - rect.left) * sx) / tileSize);
+  const ty = Math.floor(((t.clientY - rect.top) * sy) / tileSize);
+  if (!inBounds(tx, ty)) return;
+  state.mouseTile = { x: tx, y: ty };
+  onCanvasClick({ shiftKey: false });
+  e.preventDefault();
+}
+
+function killDefault(ev) { ev.preventDefault(); }
+
 export function attachInput() {
   window.addEventListener("keydown", onKeyDown);
   canvas.addEventListener("mousemove", onMouseMove);
   canvas.addEventListener("click", onCanvasClick);
+
+  // Mobile touch-hygiene: swallow gestures on the canvas surface
+  canvas.addEventListener("touchstart", killDefault, { passive: false });
+  canvas.addEventListener("touchmove", killDefault, { passive: false });
+  canvas.addEventListener("touchend", onCanvasTouchEnd, { passive: false });
+  canvas.addEventListener("gesturestart", killDefault);
+  canvas.addEventListener("gesturechange", killDefault);
+  canvas.addEventListener("gestureend", killDefault);
+  canvas.addEventListener("contextmenu", killDefault);
+
+  // Document-level: suppress iOS double-tap zoom
+  let lastTap = 0;
+  document.addEventListener("touchend", (ev) => {
+    const now = Date.now();
+    if (now - lastTap < 350) ev.preventDefault();
+    lastTap = now;
+  }, { passive: false });
+
   ui.leaveShop.addEventListener("click", closeShop);
   ui.bossSubmit.addEventListener("click", () => resolveBossAction(ui.bossInput.value));
   ui.bossInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") resolveBossAction(ui.bossInput.value);
+  });
+
+  // Boss action chips: populate the input with the preset text
+  document.querySelectorAll("#bossChips .chip").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const preset = btn.getAttribute("data-preset");
+      ui.bossInput.value = preset;
+      resolveBossAction(preset);
+    });
+  });
+
+  // Tutorial open/close
+  document.getElementById("helpBtn").addEventListener("click", () => toggleTutorial(true));
+  document.getElementById("closeTutorial").addEventListener("click", () => toggleTutorial(false));
+
+  // First-visit tutorial
+  if (!localStorage.getItem("pixelRogueSeenTutorial")) {
+    toggleTutorial(true);
+    localStorage.setItem("pixelRogueSeenTutorial", "1");
+  }
+}
+
+// D-pad + action buttons for touch devices. Safe to wire on desktop too.
+export function initTouch() {
+  // D-pad
+  document.querySelectorAll(".dpad button[data-move]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const [dx, dy] = btn.getAttribute("data-move").split(",").map(Number);
+      if (dx === 0 && dy === 0) {
+        if (state.started && !state.awaitingShop && !state.bossBattle) {
+          setMessage("You wait and gather focus.");
+          enemyTurn();
+        }
+      } else {
+        tryMove(dx, dy);
+      }
+    });
+  });
+
+  // Cast slot buttons
+  for (const slot of ["z", "x", "c", "v"]) {
+    const btn = document.getElementById(`touch${slot.toUpperCase()}`);
+    if (btn) btn.addEventListener("click", () => castFromSlot(slot, { charged: touchCharged }));
+  }
+
+  // Charged toggle (mobile replacement for Shift)
+  if (touchChargedBtn) {
+    touchChargedBtn.addEventListener("click", () => setTouchCharged(!touchCharged));
+  }
+
+  // Bag
+  document.querySelector('.action-buttons button[data-action="bag"]')?.addEventListener("click", () => {
+    if (state.started && !state.bossBattle) toggleBackpack();
   });
 }

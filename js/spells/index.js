@@ -73,5 +73,7 @@ export function castSpell(spell, tx, ty, { charged = false } = {}) {
     cast: castSpell,
     spellsById: SPELL_BY_ID
   };
-  return effect(ctx) || { acted: false };
+  const result = effect(ctx) || { acted: false };
+  if (result.acted) state.stats.spellsCast += 1;
+  return result;
 }

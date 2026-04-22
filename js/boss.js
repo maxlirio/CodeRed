@@ -1,15 +1,14 @@
 import { state, ui } from "./state.js";
 import { BOSS_PORTRAIT_SPRITE } from "./config.js";
-import { rnd, pick, setMessage } from "./utils.js";
+import { rnd, setMessage } from "./utils.js";
+import { spick } from "./rng.js";
 import { rollHit } from "./combat.js";
 import { openShop } from "./shop.js";
 import { drawSprite } from "./render.js";
 
-export function makeBossName() {
-  const first = ["Gore", "Night", "Bone", "Murk", "Rot", "Hex", "Dread", "Iron", "Blight", "Ash"];
-  const second = ["maw", "king", "warden", "tyrant", "seer", "fang", "golem", "devourer", "brute", "reaper"];
-  return `${pick(first)}${pick(second)}`;
-}
+const BOSS_FIRST = ["Gore", "Night", "Bone", "Murk", "Rot", "Hex", "Dread", "Iron", "Blight", "Ash"];
+const BOSS_SECOND = ["maw", "king", "warden", "tyrant", "seer", "fang", "golem", "devourer", "brute", "reaper"];
+export function makeBossName() { return `${spick(BOSS_FIRST)}${spick(BOSS_SECOND)}`; }
 
 function drawBossPortrait() {
   drawSprite(ui.bossCanvas.getContext("2d"), BOSS_PORTRAIT_SPRITE, 0, 0);
@@ -20,6 +19,29 @@ function renderBossState() {
     `You: HP ${state.player.hp}/${state.player.maxHp} | MP ${state.player.mana}/${state.player.maxMana} | Boss: ${state.bossBattle.hp}/${state.bossBattle.maxHp}`;
 }
 
+function parseIntent(text) {
+  const silly = /instantly|one shot|auto win|i kill the boss/i.test(text);
+  const isSpell = /spell|magic|arc|nova|bolt|burn|frost|ice|fire|lightning|cast/i.test(text);
+  const isDefend = /defend|guard|brace|shield|parry|block/i.test(text);
+  const isFlee = /flee|run away|retreat|escape/i.test(text);
+
+  let action = "attack";
+  if (silly) action = "invalid";
+  else if (isDefend) action = "defend";
+  else if (isFlee) action = "flee";
+  else if (isSpell) action = "spell";
+
+  return { silly, isSpell, isDefend, isFlee, action };
+}
+
+function updateIntentPanel({ action, manaSpend, rollType, dealt }) {
+  const el = (id) => document.getElementById(id);
+  if (el("intentAction")) el("intentAction").textContent = action;
+  if (el("intentMana")) el("intentMana").textContent = `-${manaSpend}`;
+  if (el("intentRoll")) el("intentRoll").textContent = rollType;
+  if (el("intentDmg")) el("intentDmg").textContent = `${dealt}`;
+}
+
 export function startBossBattle() {
   state.bossBattle = {
     name: makeBossName(),
@@ -27,9 +49,10 @@ export function startBossBattle() {
     maxHp: 55 + state.floor * 4,
     turn: 1
   };
-  ui.bossTitle.textContent = `Boss Battle: ${state.bossBattle.name}`;
+  ui.bossTitle.textContent = `BOSS: ${state.bossBattle.name}`;
   ui.bossOverlay.classList.remove("hidden");
-  ui.bossLog.textContent = "Describe your move. Wild claims like 'I instantly win' will fail.";
+  ui.bossLog.textContent = "Describe your move or tap a chip. The referee enforces mechanics; narration is flavor.";
+  updateIntentPanel({ action: "—", manaSpend: 0, rollType: "—", dealt: 0 });
   renderBossState();
   drawBossPortrait();
 }
@@ -37,15 +60,26 @@ export function startBossBattle() {
 export async function resolveBossAction(inputText) {
   if (!state.bossBattle || !inputText.trim()) return;
   ui.bossInput.value = "";
-  const silly = /instantly|one shot|auto win|i kill the boss/i.test(inputText);
-  const base = silly ? 0 : rnd(6, 13) + Math.floor(state.player.atk / 2);
-  const manaSpend = Math.min(state.player.mana, /spell|magic|arc|nova|bolt/i.test(inputText) ? rnd(3, 7) : 0);
+
+  const intent = parseIntent(inputText);
+  const defendMitigation = intent.isDefend ? 0.5 : 1;
+  let base;
+  if (intent.silly || intent.isFlee) base = 0;
+  else if (intent.isDefend) base = Math.max(1, Math.floor(state.player.atk / 3));
+  else base = rnd(6, 13) + Math.floor(state.player.atk / 2);
+
+  const manaSpend = intent.isSpell ? Math.min(state.player.mana, rnd(3, 7)) : 0;
   state.player.mana -= manaSpend;
+  if (intent.isSpell) base += Math.floor(state.player.spellPower * 1.5);
+
   const roll = rollHit(base);
   const dealt = roll.damage;
   state.bossBattle.hp = Math.max(0, state.bossBattle.hp - dealt);
-  const bossHit = rnd(5, 10) + Math.floor(state.floor / 3);
+  const bossHitRaw = rnd(5, 10) + Math.floor(state.floor / 3);
+  const bossHit = Math.max(1, Math.floor(bossHitRaw * defendMitigation));
   state.player.hp = Math.max(0, state.player.hp - bossHit);
+
+  updateIntentPanel({ action: intent.action, manaSpend, rollType: roll.type, dealt });
 
   let narration = "";
   const apiKey = localStorage.getItem("pixelRogueOpenAIKey");
@@ -64,9 +98,10 @@ export async function resolveBossAction(inputText) {
     } catch {}
   }
   if (!narration) {
-    narration = silly
-      ? `Referee: That claim is impossible. Your move falters.\nBoss punishes you for ${bossHit}.`
-      : `You ${roll.type === "crit" ? "land a critical" : roll.type === "miss" ? "miss badly" : "strike true"} for ${dealt}.\nBoss counters for ${bossHit}.`;
+    if (intent.silly) narration = `Referee: That claim is impossible. Your move falters.\nBoss punishes you for ${bossHit}.`;
+    else if (intent.isFlee) narration = `You hesitate and cannot find an opening.\nBoss smashes you for ${bossHit}.`;
+    else if (intent.isDefend) narration = `You brace and absorb the blow (mitigation ×0.5).\nBoss deals ${bossHit}.`;
+    else narration = `You ${roll.type === "crit" ? "land a critical" : roll.type === "miss" ? "miss badly" : "strike true"} for ${dealt}.\nBoss counters for ${bossHit}.`;
   }
   ui.bossLog.textContent = narration;
   renderBossState();

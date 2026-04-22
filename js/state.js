@@ -61,6 +61,8 @@ export const state = {
   aiEnabled: false,
   backpackOpen: false,
   bossBattle: null,
+  heroName: "",
+  seed: "",
   player: {
     className: "",
     weapon: "",
@@ -83,6 +85,16 @@ export const state = {
     spellRanks: { bolt: 1, nova: 1, mend: 1 },
     spellSlots: { z: "bolt", x: "nova", c: "mend", v: null }
   },
+  stats: {
+    kills: 0,
+    bossKills: 0,
+    spellsCast: 0,
+    goldEarned: 0,
+    floorsCleared: 0,
+    // per-floor outcome marker: "cleared" | "boss" | "died" (set when floor ends)
+    floorLog: []
+  },
+  lastKilledBy: "",
   runSeedWords: makeRunNameParts(),
   bossAlive: false,
   awaitingShop: false,

@@ -1,7 +1,7 @@
 export const tileSize = 24;
 export const cols = 28;
 export const rows = 18;
-export const maxFloor = 100;
+export const maxFloor = 15;
 
 export const COLORS = {
   wall: "#1f1f3b",

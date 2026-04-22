@@ -1,6 +1,7 @@
 import { cols, rows, ENEMY_TYPES, WEAPON_POOL } from "./config.js";
 import { state } from "./state.js";
-import { rnd, pick, key } from "./utils.js";
+import { key } from "./utils.js";
+import { srnd as rnd, spick as pick, srand } from "./rng.js";
 import { makeRelic } from "./items.js";
 import { SPELL_LIBRARY, rankOf } from "./spells/index.js";
 import { startBossBattle, makeBossName } from "./boss.js";
@@ -119,7 +120,7 @@ export function buildFloor() {
   if (state.floor % 3 === 0) {
     const unknown = SPELL_LIBRARY.filter((spell) => !state.player.knownSpells.has(spell.id));
     const rankable = SPELL_LIBRARY.filter((sp) => state.player.knownSpells.has(sp.id) && rankOf(sp.id) < 3);
-    const pool = unknown.length && Math.random() < 0.65 ? unknown : (rankable.length ? rankable : unknown);
+    const pool = unknown.length && srand() < 0.65 ? unknown : (rankable.length ? rankable : unknown);
     if (pool.length) placePickup(state.spellDrops, occupied, { spell: pick(pool) });
   }
 

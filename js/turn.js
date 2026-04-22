@@ -14,6 +14,25 @@ import { equipWeapon, recalcAttack, generateAiLoot } from "./items.js";
 import { narrateCombat } from "./ai.js";
 import { buildFloor } from "./map.js";
 import { SCHOOL_COLORS } from "./config.js";
+import { showResult } from "./result.js";
+
+function endRun(cause) {
+  state.over = true;
+  state.lastKilledBy = cause;
+  // mark the floor we died on
+  state.stats.floorLog[state.floor - 1] = "died";
+  setMessage(cause);
+  showResult();
+}
+
+function endRunVictory() {
+  state.over = true;
+  state.won = true;
+  state.stats.floorsCleared = maxFloor;
+  state.stats.floorLog[maxFloor - 1] = "boss";
+  setMessage("You conquer the dungeon.");
+  showResult();
+}
 
 function pickupAt(list, x, y) {
   const i = list.findIndex((v) => v.x === x && v.y === y);
@@ -84,12 +103,14 @@ function learnOrRankSpell(spell, nx, ny) {
 function descend() {
   if (state.bossAlive) { setMessage("A boss still guards this floor."); enemyTurn(); return; }
   if (state.awaitingShop) { setMessage("Visit the shop first."); return; }
-  if (state.floor >= maxFloor) {
-    state.won = true;
-    state.over = true;
-    setMessage("You conquer floor 100 and claim the dungeon crown!");
-    return;
-  }
+
+  // record how this floor ended
+  const hadBoss = state.floor % 5 === 0;
+  state.stats.floorLog[state.floor - 1] = hadBoss ? "boss" : "cleared";
+  state.stats.floorsCleared = Math.max(state.stats.floorsCleared, state.floor);
+
+  if (state.floor >= maxFloor) { endRunVictory(); return; }
+
   state.floor += 1;
   state.player.baseAtk += 1;
   state.player.maxHp += 2;
@@ -145,15 +166,13 @@ export function enemyTurn() {
   tickStatuses(state.player);
   if (state.player.hp <= 0) {
     state.player.hp = 0;
-    state.over = true;
-    setMessage("Lingering spell effects overwhelm you.");
+    endRun("Lingering spell effects overwhelm you.");
     return;
   }
   for (const enemy of state.enemies) {
     tickStatuses(enemy);
     if (enemy.hp <= 0) continue;
 
-    // Stun: full skip. Chill: skip every other turn.
     if (hasStatus(enemy, "stun")) continue;
     if (hasStatus(enemy, "chill")) {
       enemy.chillSkip = !enemy.chillSkip;
@@ -168,9 +187,8 @@ export function enemyTurn() {
       spawnBurst(state.player.x, state.player.y, "#ff758f", 7);
       if (state.player.hp <= 0) {
         state.player.hp = 0;
-        state.over = true;
-        setMessage("You were slain. Refresh to try again.");
-        break;
+        endRun(`Slain by ${enemy.name} on floor ${state.floor}.`);
+        return;
       }
       setMessage(`${enemy.name} hits you for ${dmg}.`);
       continue;
@@ -190,7 +208,24 @@ export function useRelic(index) {
   enemyTurn();
 }
 
-export function chooseClass(c) {
+export function chooseClass(c, opts = {}) {
+  const { heroName, seed } = opts;
+  if (heroName) state.heroName = heroName;
+  if (seed) state.seed = seed;
+
+  state.floor = 1;
+  state.over = false;
+  state.won = false;
+  state.lastKilledBy = "";
+  state.stats = { kills: 0, bossKills: 0, spellsCast: 0, goldEarned: 0, floorsCleared: 0, floorLog: [] };
+  state.player.gold = 0;
+  state.player.inventory = [];
+  state.player.knownSpells = new Set(["bolt", "nova", "mend"]);
+  state.player.spellRanks = { bolt: 1, nova: 1, mend: 1 };
+  state.player.spellSlots = { z: "bolt", x: "nova", c: "mend", v: null };
+  state.player.statuses = [];
+  state.player.lastOffensive = null;
+
   state.player.className = c.name;
   state.player.weapon = c.weapon;
   state.player.weaponBonus = 1;
@@ -207,5 +242,5 @@ export function chooseClass(c) {
   state.started = true;
   buildFloor();
   ui.classOverlay.classList.add("hidden");
-  setMessage(`You begin as a ${c.name}.`);
+  setMessage(`${state.heroName || "You"} begins as a ${c.name}.`);
 }

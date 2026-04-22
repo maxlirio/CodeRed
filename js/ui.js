@@ -3,6 +3,19 @@ import { CLASS_OPTIONS, SCHOOL_COLORS, STATUS_DEFS } from "./config.js";
 import { SPELL_BY_ID, rankOf } from "./spells/index.js";
 import { drawPortrait } from "./render.js";
 import { chooseClass } from "./turn.js";
+import { randomSeedString, setSeed } from "./rng.js";
+
+const heroNameInput = document.getElementById("heroName");
+const runSeedInput = document.getElementById("runSeed");
+const rerollNameBtn = document.getElementById("rerollName");
+const rerollSeedBtn = document.getElementById("rerollSeed");
+const heroDisplay = document.getElementById("heroDisplay");
+
+function suggestName() {
+  const { left, mid, right } = state.runSeedWords;
+  const r = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  return `${r(left)} ${r(mid)} ${r(right)}`;
+}
 
 function renderSlots() {
   const slots = state.player.spellSlots;
@@ -16,6 +29,18 @@ function renderSlots() {
   }).join(" · ");
 }
 
+function syncTouchSlotLabels() {
+  const slots = state.player.spellSlots;
+  for (const k of ["z", "x", "c", "v"]) {
+    const btn = document.getElementById(`touch${k.toUpperCase()}`);
+    if (!btn) continue;
+    const id = slots[k];
+    if (!id) { btn.textContent = `${k.toUpperCase()} —`; continue; }
+    const sp = SPELL_BY_ID[id];
+    btn.textContent = `${k.toUpperCase()} ${sp.name.split(" ")[0]} ${sp.cost}MP`;
+  }
+}
+
 function renderPlayerStatuses() {
   return (state.player.statuses || [])
     .map((s) => `<span style="color:${STATUS_DEFS[s.kind].color}">${STATUS_DEFS[s.kind].tag}${s.turns}</span>`)
@@ -23,6 +48,7 @@ function renderPlayerStatuses() {
 }
 
 export function updateUi() {
+  if (heroDisplay) heroDisplay.textContent = state.heroName || "-";
   ui.className.textContent = state.player.className || "-";
   ui.weapon.textContent = `${state.player.weapon || "-"} (${state.player.weaponType || "none"})`;
   ui.hp.textContent = `${state.player.hp}/${state.player.maxHp}`;
@@ -38,6 +64,7 @@ export function updateUi() {
 
   const statuses = renderPlayerStatuses();
   ui.spells.innerHTML = `Slots: ${renderSlots()} · Arrows: ${state.player.arrows}${statuses ? ` · ${statuses}` : ""} · Shift+click = CHARGED`;
+  syncTouchSlotLabels();
 
   if (state.aimMode && state.mouseTile) {
     ui.narration.textContent = `Aim: ${state.aimMode.name}${state.aimMode.charged ? " (CHARGED)" : ""} — click tile ${state.mouseTile.x},${state.mouseTile.y}.`;
@@ -45,13 +72,31 @@ export function updateUi() {
   drawPortrait();
 }
 
-export function renderClassChoices() {
+export function renderClassChoices(initial = {}) {
+  heroNameInput.value = initial.name || suggestName();
+  runSeedInput.value = initial.seed || randomSeedString();
+
+  rerollNameBtn.addEventListener("click", () => { heroNameInput.value = suggestName(); });
+  rerollSeedBtn.addEventListener("click", () => { runSeedInput.value = randomSeedString(); });
+
   ui.classChoices.innerHTML = "";
   for (const c of CLASS_OPTIONS) {
     const btn = document.createElement("button");
     btn.className = "choice";
     btn.innerHTML = `<strong>${c.name}</strong><span>HP ${c.hp}, MP ${c.mana}, ATK ${c.atk}, Weapon ${c.weapon}</span>`;
-    btn.addEventListener("click", () => chooseClass(c));
+    btn.addEventListener("click", () => {
+      const heroName = heroNameInput.value.trim() || suggestName();
+      const seed = runSeedInput.value.trim() || randomSeedString();
+      setSeed(seed);
+      chooseClass(c, { heroName, seed });
+
+      // Preselect class in URL so "replay same seed" reproduces the exact run
+      const params = new URLSearchParams();
+      params.set("seed", seed);
+      params.set("name", heroName);
+      params.set("class", c.name);
+      history.replaceState(null, "", "#" + params.toString());
+    });
     ui.classChoices.appendChild(btn);
   }
 }

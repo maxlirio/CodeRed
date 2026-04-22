@@ -129,17 +129,6 @@ function drawFog() {
   }
 }
 
-function drawGameOver() {
-  if (!state.over) return;
-  ctx.fillStyle = COLORS.shadow;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#fff";
-  ctx.font = "bold 22px Courier New";
-  ctx.fillText(state.won ? "YOU WIN" : "GAME OVER", canvas.width / 2 - 64, canvas.height / 2 - 8);
-  ctx.font = "14px Courier New";
-  ctx.fillText(state.won ? "You survived all 100 floors!" : "Refresh page to restart", canvas.width / 2 - 110, canvas.height / 2 + 18);
-}
-
 export function draw() {
   let sx = 0, sy = 0;
   if (state.screenShake > 0) {
@@ -162,7 +151,6 @@ export function draw() {
 
   drawAimOverlay();
   drawFog();
-  drawGameOver();
 
   ctx.restore();
   updateUi();

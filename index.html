@@ -2,36 +2,93 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Pixel Rogue</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
   <div class="frame">
     <canvas id="game" width="672" height="432" aria-label="Rogue-like game board"></canvas>
+
     <div id="classOverlay" class="overlay">
-      <h2>Choose Your Class</h2>
-      <p>Each class starts with different stats, a weapon, and spell focus.</p>
+      <h2>CHOOSE YOUR CLASS</h2>
+      <div class="field">
+        <label for="heroName">adventurer name</label>
+        <div class="field-row">
+          <input id="heroName" type="text" maxlength="24" autocomplete="off" spellcheck="false" />
+          <button class="choice" id="rerollName">reroll</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="runSeed">run seed (share this to give someone your dungeon)</label>
+        <div class="field-row">
+          <input id="runSeed" type="text" maxlength="24" autocomplete="off" spellcheck="false" />
+          <button class="choice" id="rerollSeed">new seed</button>
+        </div>
+      </div>
       <div id="classChoices" class="choice-grid"></div>
     </div>
+
     <div id="shopOverlay" class="overlay hidden">
-      <h2>Boss Defeated — Merchant Caravan</h2>
+      <h2>MERCHANT CARAVAN</h2>
       <p id="shopGold"></p>
       <div id="shopChoices" class="choice-grid"></div>
       <button class="choice" id="leaveShop">Continue Descent</button>
     </div>
+
     <div id="backpackOverlay" class="overlay hidden">
-      <h2>Backpack Loadout</h2>
-      <p>Choose weapon/loadout (press B to close)</p>
+      <h2>BACKPACK</h2>
+      <p>Choose weapon / spell slots. Press B to close.</p>
       <div id="backpackChoices" class="choice-grid"></div>
     </div>
+
     <div id="bossOverlay" class="overlay hidden">
-      <h2 id="bossTitle">Boss Arena</h2>
-      <canvas id="bossCanvas" width="96" height="96" style="width:160px;height:160px;border:1px solid #6663b6;background:#101028;"></canvas>
+      <h2 id="bossTitle">BOSS BATTLE</h2>
+      <canvas id="bossCanvas" width="96" height="96" style="width:160px;height:160px;border:1px solid var(--frame-lit);background:#000;"></canvas>
       <div id="bossState" class="inventory"></div>
-      <input id="bossInput" class="choice" placeholder="Describe your move..." />
-      <button id="bossSubmit" class="choice">Submit Action</button>
-      <div id="bossLog" class="inventory">Describe your attack to start the battle.</div>
+      <div id="bossIntent" class="intent" aria-label="Parsed action">
+        <div>action<span id="intentAction">—</span></div>
+        <div>mana<span id="intentMana">0</span></div>
+        <div>roll<span id="intentRoll">—</span></div>
+        <div>damage<span id="intentDmg">0</span></div>
+      </div>
+      <div class="action-chips" id="bossChips">
+        <button class="chip" data-preset="I swing my weapon at the boss">attack</button>
+        <button class="chip" data-preset="I cast a spell at the boss">cast spell</button>
+        <button class="chip" data-preset="I brace and defend">defend</button>
+        <button class="chip" data-preset="I feint and strike the weak spot">feint</button>
+      </div>
+      <input id="bossInput" class="choice" placeholder="Describe your move, or tap a chip above…" />
+      <button id="bossSubmit" class="choice">submit action</button>
+      <div id="bossLog" class="inventory">Describe your attack or tap a chip to start the battle.</div>
+    </div>
+
+    <div id="resultOverlay" class="overlay hidden">
+      <h2 id="resultVerdict">RUN COMPLETE</h2>
+      <div class="result-card">
+        <div class="result-name" id="resultName"></div>
+        <div class="result-class" id="resultClass"></div>
+        <div class="result-epitaph" id="resultEpitaph"></div>
+        <div class="result-grid" id="resultGrid"></div>
+        <div class="result-stats" id="resultStats"></div>
+      </div>
+      <div class="result-actions">
+        <button class="choice" id="copyShare">copy share link</button>
+        <button class="choice" id="playAgain">new run</button>
+        <button class="choice" id="replaySeed">replay same seed</button>
+      </div>
+    </div>
+
+    <div id="tutorialOverlay" class="overlay hidden">
+      <h2>HOW TO PLAY</h2>
+      <div class="result-card" style="text-align:left;">
+        <p><b style="color:var(--amber)">Goal —</b> descend 15 floors. Kill the boss on floors 5, 10, and 15 to share your run.</p>
+        <p><b style="color:var(--amber)">Move —</b> <kbd>WASD</kbd> / <kbd>←↑→↓</kbd>. Bump enemies to attack. <kbd>Space</kbd> = wait.</p>
+        <p><b style="color:var(--amber)">Cast —</b> <kbd>Z</kbd> <kbd>X</kbd> <kbd>C</kbd> <kbd>V</kbd> fire the spell in that slot. Aim spells let you click a tile. Hold <kbd>Shift</kbd> = charged (1.5× damage / cost).</p>
+        <p><b style="color:var(--amber)">Other —</b> <kbd>F</kbd> = bow shot (if equipped). <kbd>B</kbd> = backpack / re-slot spells. <kbd>1</kbd>–<kbd>6</kbd> = use a relic. <kbd>N</kbd> = toggle AI narration. <kbd>Esc</kbd> = cancel aim / close menus.</p>
+        <p><b style="color:var(--amber)">Mobile —</b> D-pad + action buttons below the canvas. Aim spells → tap the map tile to fire.</p>
+      </div>
+      <button class="choice" id="closeTutorial">got it</button>
     </div>
   </div>
 
@@ -39,23 +96,48 @@
     <div class="stats">
       <canvas id="portrait" width="16" height="16" aria-label="Hero portrait"></canvas>
       <div class="stat-grid">
-        <span>Class: <strong id="className"></strong></span>
-        <span>Weapon: <strong id="weapon"></strong></span>
-        <span>HP: <strong id="hp" class="health"></strong></span>
-        <span>MP: <strong id="mana" class="mana"></strong></span>
-        <span>Atk: <strong id="atk"></strong></span>
-        <span>Floor: <strong id="floor"></strong>/100</span>
-        <span>Gold: <strong id="gold" class="gold"></strong></span>
-        <span>Enemies: <strong id="enemies" class="danger"></strong></span>
-        <span>Boss: <strong id="bossStatus" class="boss"></strong></span>
+        <span>name: <strong id="heroDisplay">—</strong></span>
+        <span>class: <strong id="className">—</strong></span>
+        <span>weapon: <strong id="weapon">—</strong></span>
+        <span>HP: <strong id="hp" class="health">—</strong></span>
+        <span>MP: <strong id="mana" class="mana">—</strong></span>
+        <span>ATK: <strong id="atk">—</strong></span>
+        <span>floor: <strong id="floor">—</strong>/15</span>
+        <span>gold: <strong id="gold" class="gold">—</strong></span>
+        <span>enemies: <strong id="enemies" class="danger">—</strong></span>
+        <span>boss: <strong id="bossStatus" class="boss">—</strong></span>
       </div>
     </div>
     <div id="inventory" class="inventory"></div>
     <div id="spells" class="inventory"></div>
     <div id="narration" class="inventory">Narration: local combat hype mode.</div>
     <div class="log" id="log"></div>
-    <div class="hint">Move: WASD / Arrows · Wait: Space · Cast slot: Z/X/C/V (self-spells fire immediately; aim spells click tile) · Hold Shift = CHARGED (1.5x dmg / 1.5x cost) · Backpack/Slots: B · Ranged shot: F then click · Relics: 1-6 · AI narration: N.</div>
+    <div class="hint">
+      <span>move <kbd>WASD</kbd></span>
+      <span>cast <kbd>Z</kbd><kbd>X</kbd><kbd>C</kbd><kbd>V</kbd></span>
+      <span>bag <kbd>B</kbd></span>
+      <span>wait <kbd>Space</kbd></span>
+      <button class="help-btn" id="helpBtn">? full controls</button>
+    </div>
   </section>
+
+  <div class="touch-controls" id="touchControls">
+    <div class="dpad" aria-label="D-pad">
+      <button class="up" data-move="0,-1" aria-label="up">▲</button>
+      <button class="left" data-move="-1,0" aria-label="left">◀</button>
+      <button class="wait" data-move="0,0" aria-label="wait">wait</button>
+      <button class="right" data-move="1,0" aria-label="right">▶</button>
+      <button class="down" data-move="0,1" aria-label="down">▼</button>
+    </div>
+    <div class="action-buttons" aria-label="Actions">
+      <button data-slot="z" id="touchZ">Z slot</button>
+      <button data-slot="x" id="touchX">X slot</button>
+      <button data-slot="c" id="touchC">C slot</button>
+      <button data-slot="v" id="touchV">V slot</button>
+      <button data-action="charged" id="touchCharged">charged OFF</button>
+      <button data-action="bag">bag</button>
+    </div>
+  </div>
 
   <script type="module" src="js/main.js"></script>
 </body>
