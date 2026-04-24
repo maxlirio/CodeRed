@@ -53,7 +53,7 @@ export function effect(ctx) {
   let placed = 0;
   for (const t of tiles) {
     if (isWalkable(t.x, t.y) && !enemyAt(t.x, t.y) && !(state.player.x === t.x && state.player.y === t.y)) {
-      addFloorEffect(t.x, t.y, "wall", 5 + rank, 1);
+      addFloorEffect(t.x, t.y, "wall", 15 + rank * 4, 1);
       spawnBurst(t.x, t.y, SCHOOL_COLORS.life, 6);
       const c = tileCenter(t.x, t.y);
       sprouts.push({ cx: c.x, cy: c.y, life: 18, max: 18 });

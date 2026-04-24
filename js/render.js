@@ -1,10 +1,19 @@
 import { state, canvas, ctx, portraitCtx } from "./state.js";
 import {
   tileSize, cols, rows, COLORS, STATUS_DEFS,
-  ENEMY_TYPES, BOSS_SPRITE, HERO_SPRITE, PORTRAIT_SPRITE
+  ENEMY_TYPES, BOSS_SPRITE, HERO_SPRITE, PORTRAIT_SPRITE,
+  HERO_SPRITES, PORTRAIT_SPRITES,
+  COIN_SPRITE, POTION_SPRITE, RELIC_SPRITE,
+  BUILDING_SPRITES, DUNGEON_ENTRANCE_SPRITE,
+  TREE_SPRITE, FOUNTAIN_SPRITE,
+  STAIRS_DOWN_SPRITE, STAIRS_UP_SPRITE,
+  CHEST_CLOSED_SPRITE, CHEST_OPEN_SPRITE
 } from "./config.js";
 import { updateUi } from "./ui.js";
 import { renderSpellAim, renderAllSpellFx } from "./spells/index.js";
+import { tickEnemies } from "./protocols.js";
+import { tickRealtime, cullDyingEnemies } from "./combat.js";
+import { endRun } from "./turn.js";
 
 const SPRITE_BY_ENEMY = Object.fromEntries(ENEMY_TYPES.map((t) => [t.id, t.sprite]));
 
@@ -21,16 +30,25 @@ function drawTile(x, y, color) {
 }
 
 function drawHero(x, y) {
-  drawSprite(ctx, HERO_SPRITE, x * tileSize, y * tileSize);
+  const sprite = HERO_SPRITES[state.player.className] || HERO_SPRITE;
+  drawSprite(ctx, sprite, x * tileSize, y * tileSize);
 }
 
 function drawEnemy(enemy) {
   const sprite = SPRITE_BY_ENEMY[enemy.type] || BOSS_SPRITE;
+  if (enemy.hp <= 0 && enemy.dying > 0) {
+    ctx.save();
+    ctx.globalAlpha = enemy.dying / 18;
+    drawSprite(ctx, sprite, enemy.x * tileSize, enemy.y * tileSize);
+    ctx.restore();
+    return;
+  }
   drawSprite(ctx, sprite, enemy.x * tileSize, enemy.y * tileSize);
 }
 
 export function drawPortrait() {
-  drawSprite(portraitCtx, PORTRAIT_SPRITE, 0, 0);
+  const sprite = PORTRAIT_SPRITES[state.player.className] || PORTRAIT_SPRITE;
+  drawSprite(portraitCtx, sprite, 0, 0);
 }
 
 function drawParticles() {
@@ -92,26 +110,69 @@ function drawStatusMarks(t) {
   });
 }
 
+function isCoveredByBuilding(x, y) {
+  if (!state.buildings || !state.buildings.length) return false;
+  for (const b of state.buildings) {
+    if (x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h) return true;
+  }
+  return false;
+}
+
+function isFountainTile(x, y) {
+  if (!state.fountains || !state.fountains.length) return false;
+  for (const f of state.fountains) {
+    if (x >= f.x && x < f.x + f.w && y >= f.y && y < f.y + f.h) return true;
+  }
+  return false;
+}
+
+function isTreeTile(x, y) {
+  return state.trees && state.trees.some((t) => t.x === x && t.y === y);
+}
+
+function isPathTile(x, y) {
+  return state.paths && state.paths.some((p) => p.x === x && p.y === y);
+}
+
 function drawMap() {
+  const inTown = state.floor === 0;
+  const floorA = inTown ? COLORS.townFloor : COLORS.floor;
+  const floorB = inTown ? COLORS.townFloorShade : COLORS.floorShade;
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
-      if (state.map.length && state.map[y][x] === 1) drawTile(x, y, COLORS.wall);
-      else drawTile(x, y, (x + y) % 2 ? COLORS.floor : COLORS.floorShade);
+      if (!state.map.length) continue;
+      if (inTown && isCoveredByBuilding(x, y)) { drawTile(x, y, floorA); continue; }
+      if (inTown && isFountainTile(x, y)) { drawTile(x, y, floorA); continue; }
+      if (inTown && isTreeTile(x, y)) { drawTile(x, y, floorA); continue; }
+      if (inTown && isPathTile(x, y)) { drawTile(x, y, (x + y) % 2 ? COLORS.townPathA : COLORS.townPathB); continue; }
+      if (state.map[y][x] === 1) drawTile(x, y, COLORS.wall);
+      else drawTile(x, y, (x + y) % 2 ? floorA : floorB);
     }
   }
 }
 
+function drawTownFeatures() {
+  if (state.floor !== 0) return;
+  for (const t of state.trees || []) drawSprite(ctx, TREE_SPRITE, t.x * tileSize, t.y * tileSize);
+  for (const f of state.fountains || []) drawSprite(ctx, FOUNTAIN_SPRITE, f.x * tileSize, f.y * tileSize);
+  for (const b of state.buildings || []) {
+    const sprite = b.shop ? BUILDING_SPRITES[b.shop] : DUNGEON_ENTRANCE_SPRITE;
+    if (sprite) drawSprite(ctx, sprite, b.x * tileSize, b.y * tileSize);
+  }
+}
+
 function drawPickups() {
-  for (const c of state.coins) drawTile(c.x, c.y, COLORS.coin);
-  for (const p of state.potions) drawTile(p.x, p.y, COLORS.potion);
-  for (const relic of state.relicDrops) drawTile(relic.x, relic.y, COLORS.relic);
-  for (const scroll of state.spellDrops) drawTile(scroll.x, scroll.y, COLORS.spell);
-  for (const weapon of state.weaponDrops) drawTile(weapon.x, weapon.y, COLORS.weapon);
-  if (state.stairs) drawTile(state.stairs.x, state.stairs.y, COLORS.stairs);
+  for (const chest of state.chests || []) {
+    const sprite = chest.opened ? CHEST_OPEN_SPRITE : CHEST_CLOSED_SPRITE;
+    drawSprite(ctx, sprite, chest.x * tileSize, chest.y * tileSize);
+  }
+  if (state.stairs) drawSprite(ctx, STAIRS_DOWN_SPRITE, state.stairs.x * tileSize, state.stairs.y * tileSize);
+  if (state.stairsUp) drawSprite(ctx, STAIRS_UP_SPRITE, state.stairsUp.x * tileSize, state.stairsUp.y * tileSize);
 }
 
 
 function drawFog() {
+  if (state.floor === 0) return;
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
       const d = Math.abs(x - state.player.x) + Math.abs(y - state.player.y);
@@ -136,6 +197,7 @@ export function draw() {
 
   drawMap();
   drawFloorEffects();
+  drawTownFeatures();
   drawPickups();
 
   for (const enemy of state.enemies) { drawEnemy(enemy); drawStatusMarks(enemy); }
@@ -151,4 +213,53 @@ export function draw() {
   updateUi();
 }
 
-export function loop() { draw(); requestAnimationFrame(loop); }
+function isPaused() {
+  if (state.over) return true;
+  if (!state.started) return true;
+  if (state.awaitingShop) return true;
+  if (state.backpackOpen) return true;
+  if (state.aimMode) return true;
+  if (state.tutorialOpen) return true;
+  if (state.chestOpen) return true;
+  if (state.discardOpen) return true;
+  return false;
+}
+
+let lastFrameMs = null;
+const STATUS_TICK_MS = 500;
+let statusAccum = 0;
+
+function tickWorld(dt) {
+  if (state.player.hp <= 0) return;
+  if (state.player.moveTimer > 0) state.player.moveTimer = Math.max(0, state.player.moveTimer - dt);
+
+  statusAccum += dt;
+  while (statusAccum >= STATUS_TICK_MS) {
+    statusAccum -= STATUS_TICK_MS;
+    tickRealtime();
+    if (state.player.hp <= 0) {
+      state.player.hp = 0;
+      endRun("Lingering effects overwhelm you.");
+      return;
+    }
+  }
+
+  tickEnemies(dt);
+  cullDyingEnemies();
+
+  if (state.player.hp <= 0) {
+    state.player.hp = 0;
+    const who = state.lastHitBy || "the dungeon";
+    endRun(`Slain by ${who} on floor ${state.floor}.`);
+  }
+}
+
+export function loop() {
+  const now = performance.now();
+  const dt = lastFrameMs == null ? 0 : Math.min(now - lastFrameMs, 100);
+  lastFrameMs = now;
+  if (!isPaused()) tickWorld(dt);
+  else statusAccum = 0;
+  draw();
+  requestAnimationFrame(loop);
+}

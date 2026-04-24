@@ -24,13 +24,12 @@ export const ui = {
   leaveShop: document.getElementById("leaveShop"),
   backpackOverlay: document.getElementById("backpackOverlay"),
   backpackChoices: document.getElementById("backpackChoices"),
-  bossOverlay: document.getElementById("bossOverlay"),
-  bossTitle: document.getElementById("bossTitle"),
-  bossCanvas: document.getElementById("bossCanvas"),
-  bossState: document.getElementById("bossState"),
-  bossInput: document.getElementById("bossInput"),
-  bossSubmit: document.getElementById("bossSubmit"),
-  bossLog: document.getElementById("bossLog")
+  chestOverlay: document.getElementById("chestOverlay"),
+  chestLoot: document.getElementById("chestLoot"),
+  closeChest: document.getElementById("closeChest"),
+  discardOverlay: document.getElementById("discardOverlay"),
+  discardMessage: document.getElementById("discardMessage"),
+  discardChoices: document.getElementById("discardChoices")
 };
 
 function makeRunNameParts() {
@@ -42,16 +41,19 @@ function makeRunNameParts() {
 }
 
 export const state = {
-  floor: 1,
+  floor: 0,
+  floorCache: {},
   map: [],
   rooms: [],
-  coins: [],
-  potions: [],
-  relicDrops: [],
-  spellDrops: [],
-  weaponDrops: [],
   enemies: [],
+  interactables: [],
+  buildings: [],
+  trees: [],
+  paths: [],
+  fountains: [],
+  chests: [],
   stairs: null,
+  stairsUp: null,
   particles: [],
   floorEffects: [],
   screenShake: 0,
@@ -60,7 +62,10 @@ export const state = {
   chargeArmed: false,
   aiEnabled: false,
   backpackOpen: false,
-  bossBattle: null,
+  tutorialOpen: false,
+  chestOpen: false,
+  discardOpen: false,
+  lastHitBy: "",
   heroName: "",
   seed: "",
   player: {
@@ -77,6 +82,8 @@ export const state = {
     spellPower: 2,
     gold: 0,
     arrows: 10,
+    moveTimer: 0,
+    spellPoints: 0,
     inventory: [],
     backpack: [],
     statuses: [],

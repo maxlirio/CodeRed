@@ -6,7 +6,6 @@ import {
   hasStatus, applyStatus, removeStatus, addFloorEffect
 } from "./fx.js";
 import { narrateCombat } from "./ai.js";
-import { openShop } from "./shop.js";
 
 export function rollHit(baseDamage) {
   const r = Math.random();
@@ -52,27 +51,37 @@ export function playerTakeDamage(amount) {
 
 export function clearDeadEnemies() {
   let killedBoss = false;
-  state.enemies = state.enemies.filter((enemy) => {
-    if (enemy.hp > 0) return true;
+  for (const enemy of state.enemies) {
+    if (enemy.hp > 0 || enemy.rewardsGranted) continue;
+    enemy.rewardsGranted = true;
+    enemy.dying = 18;
     if (enemy.boss) { killedBoss = true; state.stats.bossKills += 1; }
     state.stats.kills += 1;
     const gold = enemy.boss ? rnd(18, 30) : rnd(2, 7);
     state.player.gold += gold;
     state.stats.goldEarned += gold;
     spawnBurst(enemy.x, enemy.y, enemy.boss ? "#ff5dc1" : "#ffd166", 12);
-    return false;
-  });
+  }
   if (killedBoss) {
     state.bossAlive = false;
-    state.awaitingShop = true;
-    openShop();
-    setMessage("The boss falls. A merchant appears.");
+    state.player.spellPoints += 2;
+    setMessage("The boss falls. +2 Spell Points. Return to town or press on.");
     narrateCombat("The floor boss crashes down and the crowd gasps in awe.");
   }
 }
 
+export function cullDyingEnemies() {
+  state.enemies = state.enemies.filter((e) => {
+    if (e.hp > 0) return true;
+    if (e.dying > 0) { e.dying -= 1; return true; }
+    return false;
+  });
+}
+
 export function playerAttack(enemy) {
-  const rolled = rollHit(rnd(state.player.atk - 1, state.player.atk + 3));
+  const enchant = state.player.statuses && state.player.statuses.find((s) => s.kind === "enchantblade");
+  const bonusAtk = enchant ? enchant.power : 0;
+  const rolled = rollHit(rnd(state.player.atk - 1 + bonusAtk, state.player.atk + 3 + bonusAtk));
   const dmg = rolled.damage;
   enemy.hp -= Math.max(0, dmg);
   spawnBurst(enemy.x, enemy.y, "#ff758f", 9);
@@ -85,15 +94,16 @@ export function playerAttack(enemy) {
     state.stats.kills += 1;
     if (enemy.boss) {
       state.stats.bossKills += 1;
-      setMessage(`You slay ${enemy.name}, floor boss!`);
+      state.player.spellPoints += 2;
+      setMessage(`You slay ${enemy.name}, floor boss! +2 Spell Points.`);
       narrateCombat(`Boss ${enemy.name} collapses after a brutal strike.`);
       state.bossAlive = false;
-      state.awaitingShop = true;
-      state.enemies = state.enemies.filter((e) => e !== enemy);
-      openShop();
+      enemy.rewardsGranted = true;
+      enemy.dying = 18;
       return;
     }
-    state.enemies = state.enemies.filter((e) => e !== enemy);
+    enemy.rewardsGranted = true;
+    enemy.dying = 18;
     setMessage(`You defeat a ${enemy.type}.`);
     narrateCombat(`You dropped a ${enemy.type} with a clean finishing blow.`);
   } else {
@@ -175,6 +185,13 @@ export function tickStatuses(t) {
     s.turns -= 1;
   }
   t.statuses = t.statuses.filter((s) => s.turns > 0);
+}
+
+export function tickRealtime() {
+  tickFloorEffects();
+  tickStatuses(state.player);
+  for (const e of state.enemies) tickStatuses(e);
+  clearDeadEnemies();
 }
 
 export function tickFloorEffects() {

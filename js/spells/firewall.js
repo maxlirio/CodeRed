@@ -50,7 +50,7 @@ export function renderFx() {
 export function effect(ctx) {
   const { tx, ty, rank, pow, baseDmg, spell } = ctx;
   const tiles = wallTilesFor(tx, ty);
-  const duration = 4 + rank;
+  const duration = 10 + rank * 3;
   const power = 2 + Math.floor(pow / 3);
   let placed = 0;
   let hit = 0;
@@ -60,7 +60,7 @@ export function effect(ctx) {
     const c = tileCenter(t.x, t.y);
     flares.push({ cx: c.x, cy: c.y, life: 18, max: 18 });
     const e = enemyAt(t.x, t.y);
-    if (e) { damageEnemy(e, baseDmg, spell.school); applyStatus(e, "burn", 3, power); hit++; }
+    if (e) { damageEnemy(e, baseDmg, spell.school); applyStatus(e, "burn", 8, power); hit++; }
     placed++;
   }
   if (!placed) { setMessage("Firewall has no ground to claim."); return { acted: false }; }

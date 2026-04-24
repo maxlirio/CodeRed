@@ -3,9 +3,8 @@ import { tileSize } from "./config.js";
 import { setMessage, inBounds } from "./utils.js";
 import { SPELL_BY_ID, castSpell, spendSpellMana } from "./spells/index.js";
 import { rangedAttackAt } from "./combat.js";
-import { tryMove, enemyTurn, useRelic } from "./turn.js";
+import { tryMove, useRelic, returnToTown } from "./turn.js";
 import { renderBackpack } from "./backpack.js";
-import { resolveBossAction } from "./boss.js";
 import { closeShop } from "./shop.js";
 
 const MOVE_KEYS = {
@@ -18,7 +17,7 @@ const MOVE_KEYS = {
 const HOTKEYS = new Set([
   "arrowup", "arrowdown", "arrowleft", "arrowright",
   "w", "a", "s", "d", " ",
-  "z", "x", "c", "v", "f", "n", "b", "?",
+  "z", "x", "c", "v", "q", "e", "f", "n", "b", "?",
   "1", "2", "3", "4", "5", "6", "escape"
 ]);
 
@@ -40,7 +39,7 @@ function castFromSlot(k, { charged = false } = {}) {
   if (spell.targeting === "self" || spell.targeting === "adjacent") {
     if (state.player.mana < cost) { setMessage("Not enough mana."); return; }
     const res = castSpell(spell, state.player.x, state.player.y, { charged });
-    if (res.acted) { spendSpellMana(spell, charged); enemyTurn(); }
+    if (res.acted) spendSpellMana(spell, charged);
     if (charged) setTouchCharged(false);
   } else {
     state.aimMode = { kind: "spell", spell, name: spell.name, charged };
@@ -70,6 +69,7 @@ function toggleAi() {
 function toggleTutorial(force) {
   const open = typeof force === "boolean" ? force : tutorialOverlay.classList.contains("hidden");
   tutorialOverlay.classList.toggle("hidden", !open);
+  state.tutorialOpen = open;
 }
 
 function setTouchCharged(v) {
@@ -87,14 +87,15 @@ function onKeyDown(e) {
   const k = e.key.toLowerCase();
   if (HOTKEYS.has(k)) e.preventDefault();
 
-  // ? works at any time (including during boss battle) to read rules
   if (k === "?") { toggleTutorial(); return; }
 
-  if (state.bossBattle && k !== "escape") return;
+  if (e.ctrlKey && k === "r") { e.preventDefault(); returnToTown(); return; }
 
   if (MOVE_KEYS[k]) { tryMove(...MOVE_KEYS[k]); return; }
 
-  if (["z", "x", "c", "v"].includes(k)) castFromSlot(k, { charged: e.shiftKey });
+  const maxSlots = state.player.maxSpellSlots || 4;
+  const slotKeys = ["z", "x", "c", "v", "q", "e"].slice(0, maxSlots);
+  if (slotKeys.includes(k)) castFromSlot(k, { charged: e.shiftKey });
 
   if (k === "f") {
     if (state.player.weaponType === "bow") {
@@ -107,7 +108,7 @@ function onKeyDown(e) {
 
   if (k === "n") toggleAi();
 
-  if (k === "b" && state.started && !state.bossBattle) toggleBackpack();
+  if (k === "b" && state.started) toggleBackpack();
 
   if (k === "escape") {
     state.aimMode = null;
@@ -118,10 +119,6 @@ function onKeyDown(e) {
 
   if (["1", "2", "3", "4", "5", "6"].includes(k)) useRelic(Number(k) - 1);
 
-  if (k === " " && state.started && !state.awaitingShop && !state.bossBattle) {
-    setMessage("You wait and gather focus.");
-    enemyTurn();
-  }
 }
 
 function onMouseMove(e) {
@@ -134,7 +131,7 @@ function onMouseMove(e) {
 }
 
 function onCanvasClick(e) {
-  if (!state.aimMode || !state.mouseTile || state.awaitingShop || !state.started || state.over || state.bossBattle) return;
+  if (!state.aimMode || !state.mouseTile || state.awaitingShop || !state.started || state.over) return;
   let acted = false;
   if (state.aimMode.kind === "ranged") {
     acted = rangedAttackAt(state.mouseTile.x, state.mouseTile.y);
@@ -158,7 +155,6 @@ function onCanvasClick(e) {
     if (acted) { spendSpellMana(spell, charged); if (charged) setTouchCharged(false); }
   }
   state.aimMode = null;
-  if (acted) enemyTurn();
 }
 
 // Canvas touch support: map touch → the same tile under the finger so aiming works.
@@ -201,18 +197,10 @@ export function attachInput() {
   }, { passive: false });
 
   ui.leaveShop.addEventListener("click", closeShop);
-  ui.bossSubmit.addEventListener("click", () => resolveBossAction(ui.bossInput.value));
-  ui.bossInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") resolveBossAction(ui.bossInput.value);
-  });
 
-  // Boss action chips: populate the input with the preset text
-  document.querySelectorAll("#bossChips .chip").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const preset = btn.getAttribute("data-preset");
-      ui.bossInput.value = preset;
-      resolveBossAction(preset);
-    });
+  ui.closeChest.addEventListener("click", () => {
+    ui.chestOverlay.classList.add("hidden");
+    state.chestOpen = false;
   });
 
   // Tutorial open/close
@@ -232,14 +220,7 @@ export function initTouch() {
   document.querySelectorAll(".dpad button[data-move]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const [dx, dy] = btn.getAttribute("data-move").split(",").map(Number);
-      if (dx === 0 && dy === 0) {
-        if (state.started && !state.awaitingShop && !state.bossBattle) {
-          setMessage("You wait and gather focus.");
-          enemyTurn();
-        }
-      } else {
-        tryMove(dx, dy);
-      }
+      if (dx !== 0 || dy !== 0) tryMove(dx, dy);
     });
   });
 
@@ -256,6 +237,6 @@ export function initTouch() {
 
   // Bag
   document.querySelector('.action-buttons button[data-action="bag"]')?.addEventListener("click", () => {
-    if (state.started && !state.bossBattle) toggleBackpack();
+    if (state.started) toggleBackpack();
   });
 }

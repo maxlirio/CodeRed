@@ -57,7 +57,7 @@ export function effect(ctx) {
   const enemy = enemyAt(tx, ty);
   if (!enemy) { setMessage("Hunter's Mark needs a target."); return { acted: false }; }
   if (!enemy.id) enemy.id = `e_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
-  applyStatus(enemy, "mark", 3 + rank, 1);
+  applyStatus(enemy, "mark", 10 + rank * 3, 1);
   reticles.push({ enemyId: enemy.id, life: 26, max: 26 });
   setMessage(`${enemy.name} is marked.`);
   return { acted: true, offensive: false };

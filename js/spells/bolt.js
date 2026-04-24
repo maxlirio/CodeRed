@@ -85,8 +85,8 @@ export function effect(ctx) {
     if (enemy) {
       addStrike(prev, tile, true);
       const dealt = damageEnemy(enemy, baseDmg, spell.school);
-      applyStatus(enemy, "shock", 2, 1);
-      if (isCrit && rank >= 3) applyStatus(enemy, "stun", 1, 1);
+      applyStatus(enemy, "shock", 6 + rank * 2, 1);
+      if (isCrit && rank >= 3) applyStatus(enemy, "stun", 4, 1);
       setMessage(`Arc Bolt hits ${enemy.name} for ${dealt}${isCrit ? " (crit!)" : ""}.`);
       hit = true;
       prev = tile;

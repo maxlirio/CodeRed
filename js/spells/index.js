@@ -25,16 +25,87 @@ import * as firewall from "./firewall.js";
 import * as huntersmark from "./huntersmark.js";
 import * as trapwire from "./trapwire.js";
 import * as vault from "./vault.js";
+import * as venom from "./venom.js";
+import * as haste from "./haste.js";
+import * as stoneskin from "./stoneskin.js";
+import * as regrow from "./regrow.js";
+import * as icenova from "./icenova.js";
+import * as lightningstorm from "./lightningstorm.js";
+import * as phaseshift from "./phaseshift.js";
+import * as ravenflight from "./ravenflight.js";
+import * as sunbolt from "./sunbolt.js";
+import * as curse from "./curse.js";
+import * as rallystrike from "./rallystrike.js";
+import * as smite from "./smite.js";
+import * as deathcoil from "./deathcoil.js";
+import * as hellfire from "./hellfire.js";
+import * as shadowstrike from "./shadowstrike.js";
+import * as volley from "./volley.js";
+import * as entangle from "./entangle.js";
+import * as enchantblade from "./enchantblade.js";
 
 const MODULES = [
   bolt, chain, nova, ember, meteor, frost, pull, mend, drain, thorn, blink, echo,
   shieldwall, cleave, warcry,
   arcanemissile, glacialprison, firewall,
-  huntersmark, trapwire, vault
+  huntersmark, trapwire, vault,
+  venom, haste, stoneskin, regrow, icenova, lightningstorm,
+  phaseshift, ravenflight, sunbolt, curse,
+  rallystrike, smite, deathcoil, hellfire, shadowstrike, volley, entangle, enchantblade
 ];
 
-export const SPELL_LIBRARY = MODULES.map((m) => m.meta);
+const CLASS_THEMES = {
+  // existing
+  arcanemissile: ["Mage", "Warlock", "Necromancer"],
+  blink:         ["Rogue", "Mage", "Warlock", "Ranger"],
+  bolt:          ["Mage", "Warlock"],
+  chain:         ["Mage", "Warlock", "Necromancer"],
+  cleave:        ["Knight", "Paladin", "Ranger"],
+  drain:         ["Necromancer", "Warlock"],
+  echo:          ["Mage", "Warlock", "Rogue"],
+  ember:         ["Mage", "Warlock"],
+  firewall:      ["Mage", "Warlock"],
+  frost:         ["Mage", "Druid"],
+  glacialprison: ["Mage", "Druid"],
+  huntersmark:   ["Ranger", "Rogue"],
+  mend:          ["Paladin", "Druid", "Mage", "Necromancer"],
+  meteor:        ["Mage", "Warlock"],
+  nova:          ["Mage", "Warlock"],
+  pull:          ["Mage", "Warlock", "Rogue"],
+  shieldwall:    ["Knight", "Paladin"],
+  thorn:         ["Druid", "Ranger"],
+  trapwire:      ["Ranger", "Rogue"],
+  vault:         ["Ranger", "Rogue"],
+  warcry:        ["Knight", "Paladin"],
+  // new batch 1
+  venom:         ["Rogue", "Druid", "Necromancer", "Warlock"],
+  haste:         ["Rogue", "Mage", "Druid", "Ranger"],
+  stoneskin:     ["Knight", "Paladin", "Druid"],
+  regrow:        ["Druid", "Paladin", "Mage"],
+  icenova:       ["Mage", "Druid", "Warlock"],
+  lightningstorm:["Mage", "Warlock"],
+  phaseshift:    ["Mage", "Rogue", "Warlock"],
+  ravenflight:   ["Mage", "Rogue", "Druid"],
+  sunbolt:       ["Paladin", "Mage", "Warlock"],
+  curse:         ["Warlock", "Necromancer", "Rogue"],
+  // new batch 2 (class-specific)
+  rallystrike:   ["Knight", "Paladin"],
+  smite:         ["Paladin", "Knight"],
+  deathcoil:     ["Necromancer", "Warlock"],
+  hellfire:      ["Warlock", "Mage"],
+  shadowstrike:  ["Rogue", "Ranger"],
+  volley:        ["Ranger"],
+  entangle:      ["Druid", "Ranger"],
+  enchantblade:  ["Knight", "Paladin", "Warlock"]
+};
+
+export const SPELL_LIBRARY = MODULES.map((m) => ({ ...m.meta, themes: CLASS_THEMES[m.meta.id] || [] }));
 export const SPELL_BY_ID = Object.fromEntries(SPELL_LIBRARY.map((s) => [s.id, s]));
+
+export function isSpellForPlayer(spell) {
+  if (!spell || !spell.themes || !spell.themes.length) return true;
+  return spell.themes.includes(state.player.className);
+}
 const EFFECTS = Object.fromEntries(MODULES.map((m) => [m.meta.id, m.effect]));
 const MODULE_BY_ID = Object.fromEntries(MODULES.map((m) => [m.meta.id, m]));
 

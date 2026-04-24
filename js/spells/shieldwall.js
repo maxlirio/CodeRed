@@ -37,8 +37,8 @@ export function renderFx() {
 
 export function effect(ctx) {
   const { rank } = ctx;
-  applyStatus(state.player, "ward", 2 + Math.floor(rank / 2), 50);
-  applyStatus(state.player, "regen", 2, 2);
+  applyStatus(state.player, "ward", 8 + rank * 2, 50);
+  applyStatus(state.player, "regen", 8 + rank, 2);
   casts.push({ life: 22, max: 22 });
   setMessage("Shield Wall braced.");
   return { acted: true, offensive: false };

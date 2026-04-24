@@ -35,25 +35,16 @@
       <div id="backpackChoices" class="choice-grid"></div>
     </div>
 
-    <div id="bossOverlay" class="overlay hidden">
-      <h2 id="bossTitle">BOSS BATTLE</h2>
-      <canvas id="bossCanvas" width="96" height="96" style="width:160px;height:160px;border:1px solid var(--frame-lit);background:#000;"></canvas>
-      <div id="bossState" class="inventory"></div>
-      <div id="bossIntent" class="intent" aria-label="Parsed action">
-        <div>action<span id="intentAction">—</span></div>
-        <div>mana<span id="intentMana">0</span></div>
-        <div>roll<span id="intentRoll">—</span></div>
-        <div>damage<span id="intentDmg">0</span></div>
-      </div>
-      <div class="action-chips" id="bossChips">
-        <button class="chip" data-preset="I swing my weapon at the boss">attack</button>
-        <button class="chip" data-preset="I cast a spell at the boss">cast spell</button>
-        <button class="chip" data-preset="I brace and defend">defend</button>
-        <button class="chip" data-preset="I feint and strike the weak spot">feint</button>
-      </div>
-      <input id="bossInput" class="choice" placeholder="Describe your move, or tap a chip above…" />
-      <button id="bossSubmit" class="choice">submit action</button>
-      <div id="bossLog" class="inventory">Describe your attack or tap a chip to start the battle.</div>
+    <div id="discardOverlay" class="overlay hidden">
+      <h2>DISCARD</h2>
+      <p id="discardMessage"></p>
+      <div id="discardChoices" class="choice-grid"></div>
+    </div>
+
+    <div id="chestOverlay" class="overlay hidden">
+      <h2>CHEST CONTENTS</h2>
+      <div id="chestLoot" class="inventory"></div>
+      <button class="choice" id="closeChest">continue</button>
     </div>
 
     <div id="resultOverlay" class="overlay hidden">

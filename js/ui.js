@@ -8,15 +8,33 @@ const heroNameInput = document.getElementById("heroName");
 const rerollNameBtn = document.getElementById("rerollName");
 const heroDisplay = document.getElementById("heroDisplay");
 
+const HERO_FIRST_NAMES = [
+  "Edward", "Mira", "Gareth", "Elena", "Finn", "Aurora", "Kael", "Ivy",
+  "Arthur", "Lyra", "Cedric", "Nora", "Dorian", "Selene", "Owen", "Freya",
+  "Roland", "Isolde", "Alistair", "Mabel", "Percival", "Rowan", "Tristan", "Eira",
+  "Bastian", "Saoirse", "Caspian", "Astrid", "Oswin", "Maren", "Leif", "Sigrid",
+  "Henry", "Clara", "Thomas", "Rosalind", "Marcus", "Juno", "Bertram", "Lena",
+  "Desmond", "Imogen", "Philip", "Cordelia", "Gideon", "Beatrice", "Silas", "Margot"
+];
+
+const HERO_SURNAMES = [
+  "Ashford", "Blackwood", "Crane", "Dunmore", "Everly", "Falk", "Graves",
+  "Hale", "Ironwood", "Jessup", "Kellen", "Locke", "Moore", "Nash",
+  "Orrick", "Pike", "Quinn", "Ravenna", "Stone", "Thorne", "Vale",
+  "Wyatt", "Hollis", "Briggs", "Clay", "Drake", "Marsh", "Weller",
+  "Sinclair", "Holloway", "Fenwick", "Garrow", "Monroe", "Keene"
+];
+
 function suggestName() {
-  const { left, mid, right } = state.runSeedWords;
   const r = (arr) => arr[Math.floor(Math.random() * arr.length)];
-  return `${r(left)} ${r(mid)} ${r(right)}`;
+  return `${r(HERO_FIRST_NAMES)} ${r(HERO_SURNAMES)}`;
 }
 
 function renderSlots() {
   const slots = state.player.spellSlots;
-  return ["z", "x", "c", "v"].map((k) => {
+  const maxSlots = state.player.maxSpellSlots || 4;
+  const keys = ["z", "x", "c", "v", "q", "e"].slice(0, maxSlots);
+  return keys.map((k) => {
     const id = slots[k];
     if (!id) return `<span style="color:#6b6b8f">[${k.toUpperCase()}] -</span>`;
     const sp = SPELL_BY_ID[id];
@@ -51,7 +69,7 @@ export function updateUi() {
   ui.hp.textContent = `${state.player.hp}/${state.player.maxHp}`;
   ui.mana.textContent = `${state.player.mana}/${state.player.maxMana}`;
   ui.atk.textContent = `${state.player.atk} (+${state.player.spellPower} spell)`;
-  ui.floor.textContent = state.floor;
+  ui.floor.textContent = state.floor === 0 ? "Town" : state.floor;
   ui.gold.textContent = state.player.gold;
   ui.enemies.textContent = state.enemies.length;
   ui.bossStatus.textContent = state.bossAlive ? "Alive" : "Cleared";
@@ -82,7 +100,8 @@ export function renderClassChoices() {
       .filter(Boolean)
       .map((s) => `<span style="color:${SCHOOL_COLORS[s.school]}">${s.name}</span>`)
       .join(" · ");
-    btn.innerHTML = `<strong>${c.name}</strong><span>HP ${c.hp}, MP ${c.mana}, ATK ${c.atk}, Weapon ${c.weapon}</span>${starts ? `<span>${starts}</span>` : ""}`;
+    const desc = c.desc ? `<span style="color:var(--ink-dim);font-style:italic">${c.desc}</span>` : "";
+    btn.innerHTML = `<strong>${c.name}</strong>${desc}<span>HP ${c.hp}, MP ${c.mana}, ATK ${c.atk}, Weapon ${c.weapon}</span>${starts ? `<span>${starts}</span>` : ""}`;
     btn.addEventListener("click", () => {
       const heroName = heroNameInput.value.trim() || suggestName();
       chooseClass(c, { heroName });

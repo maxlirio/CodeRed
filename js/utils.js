@@ -8,7 +8,7 @@ export function distance(a, b) { return Math.abs(a.x - b.x) + Math.abs(a.y - b.y
 
 export function inBounds(x, y) { return x >= 0 && y >= 0 && x < cols && y < rows; }
 export function isWalkable(x, y) { return inBounds(x, y) && state.map[y][x] === 0; }
-export function enemyAt(x, y) { return state.enemies.find((e) => e.x === x && e.y === y); }
+export function enemyAt(x, y) { return state.enemies.find((e) => e.x === x && e.y === y && e.hp > 0); }
 
 export function lineTiles(x1, y1, x2, y2) {
   const tiles = [];

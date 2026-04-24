@@ -57,13 +57,13 @@ export function renderFx() {
 }
 
 export function effect(ctx) {
-  const { tx, ty, baseDmg, spell } = ctx;
+  const { tx, ty, baseDmg, rank, spell } = ctx;
   const enemy = enemyAt(tx, ty);
   if (!enemy) { setMessage("Glacial Prison needs a target."); return { acted: false }; }
   const dmg = Math.floor(baseDmg * 1.2);
   damageEnemy(enemy, dmg, spell.school);
-  applyStatus(enemy, "chill", 3, 1);
-  applyStatus(enemy, "stun", 2, 1);
+  applyStatus(enemy, "chill", 12 + rank * 3, 1);
+  applyStatus(enemy, "stun", 6 + rank * 2, 1);
   const c = tileCenter(tx, ty);
   prisons.push({ cx: c.x, cy: c.y, life: 26, max: 26 });
   clearDeadEnemies();

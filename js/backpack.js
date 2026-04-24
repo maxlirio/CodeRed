@@ -45,8 +45,11 @@ function renderSpellRow(sp) {
   btnRow.style.marginTop = "4px";
   btnRow.style.display = "flex";
   btnRow.style.gap = "4px";
+  btnRow.style.flexWrap = "wrap";
 
-  for (const k of ["z", "x", "c", "v"]) {
+  const maxSlots = state.player.maxSpellSlots || 4;
+  const slotKeys = ["z", "x", "c", "v", "q", "e"].slice(0, maxSlots);
+  for (const k of slotKeys) {
     const b = document.createElement("button");
     b.className = "choice";
     b.style.padding = "4px 8px";
@@ -76,6 +79,24 @@ function renderSpellRow(sp) {
   });
   btnRow.appendChild(clear);
 
+  if (rank < 3) {
+    const upgrade = document.createElement("button");
+    upgrade.className = "choice";
+    upgrade.style.padding = "4px 8px";
+    upgrade.style.fontSize = "11px";
+    const canAfford = state.player.spellPoints > 0;
+    upgrade.textContent = `Upgrade (1 SP)`;
+    upgrade.style.opacity = canAfford ? "1" : "0.4";
+    upgrade.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      if (state.player.spellPoints <= 0) return;
+      state.player.spellPoints -= 1;
+      state.player.spellRanks[sp.id] = rank + 1;
+      renderBackpack();
+    });
+    btnRow.appendChild(upgrade);
+  }
+
   row.appendChild(btnRow);
   return row;
 }
@@ -84,7 +105,7 @@ export function renderBackpack() {
   ui.backpackChoices.innerHTML = "";
   ui.backpackChoices.appendChild(sectionHeader("— Weapons —"));
   renderWeapons();
-  ui.backpackChoices.appendChild(sectionHeader("— Spell Slots (click a key to assign) —", "6px"));
+  ui.backpackChoices.appendChild(sectionHeader(`— Spells (${state.player.spellPoints} SP to spend) —`, "6px"));
 
   const known = SPELL_LIBRARY.filter((sp) => state.player.knownSpells.has(sp.id));
   for (const sp of known) ui.backpackChoices.appendChild(renderSpellRow(sp));

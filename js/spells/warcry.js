@@ -32,7 +32,7 @@ export function renderFx() {
 export function effect(ctx) {
   const { rank } = ctx;
   const stunned = state.enemies.filter((e) => distance(e, state.player) <= 1);
-  for (const e of stunned) applyStatus(e, "stun", 1 + Math.floor(rank / 3), 1);
+  for (const e of stunned) applyStatus(e, "stun", 5 + rank * 2, 1);
   const heal = 4 + rank;
   state.player.hp = Math.min(state.player.maxHp, state.player.hp + heal);
   shouts.push({ life: 18, max: 18 });

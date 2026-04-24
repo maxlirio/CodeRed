@@ -1,25 +1,22 @@
 import { state, ui } from "./state.js";
-import { maxFloor } from "./config.js";
-import { rnd, distance, isWalkable, enemyAt, setMessage, levelManaPool } from "./utils.js";
-import {
-  isWallBlocked, spawnBurst,
-  hasStatus
-} from "./fx.js";
-import {
-  playerAttack, clearDeadEnemies, playerTakeDamage,
-  tickStatuses, tickFloorEffects, triggerMine, triggerTrap
-} from "./combat.js";
+import { maxFloor, MAX_KNOWN_SPELLS } from "./config.js";
+import { rnd, isWalkable, enemyAt, setMessage, levelManaPool } from "./utils.js";
+import { isWallBlocked, spawnBurst } from "./fx.js";
+import { playerAttack } from "./combat.js";
 import { rankOf } from "./spells/index.js";
 import { equipWeapon, recalcAttack, generateAiLoot } from "./items.js";
+import { openSpellDiscard } from "./discard.js";
 import { narrateCombat } from "./ai.js";
-import { buildFloor } from "./map.js";
+import { buildFloor, buildTown } from "./map.js";
+import { openShop } from "./shop.js";
 import { SCHOOL_COLORS } from "./config.js";
 import { showResult } from "./result.js";
+
+const PLAYER_MOVE_COOLDOWN_MS = 110;
 
 export function endRun(cause) {
   state.over = true;
   state.lastKilledBy = cause;
-  state.bossBattle = null;
   state.stats.floorLog[state.floor - 1] = "died";
   setMessage(cause);
   showResult();
@@ -32,51 +29,6 @@ function endRunVictory() {
   state.stats.floorLog[maxFloor - 1] = "boss";
   setMessage("You conquer the dungeon.");
   showResult();
-}
-
-function pickupAt(list, x, y) {
-  const i = list.findIndex((v) => v.x === x && v.y === y);
-  return i === -1 ? null : list.splice(i, 1)[0];
-}
-
-function handlePickups(nx, ny) {
-  const coin = pickupAt(state.coins, nx, ny);
-  if (coin) {
-    const amount = rnd(1, 5);
-    state.player.gold += amount;
-    setMessage(`You found ${amount} gold.`);
-  }
-
-  const potion = pickupAt(state.potions, nx, ny);
-  if (potion) {
-    const heal = rnd(6, 12);
-    state.player.hp = Math.min(state.player.maxHp, state.player.hp + heal);
-    spawnBurst(nx, ny, "#84f6a6", 10);
-    setMessage(`Potion heals ${heal} HP.`);
-  }
-
-  const relicDrop = pickupAt(state.relicDrops, nx, ny);
-  if (relicDrop) {
-    if (state.player.inventory.length < 6) {
-      state.player.inventory.push(relicDrop.relic);
-      setMessage(`Found relic: ${relicDrop.relic.name}.`);
-    } else {
-      setMessage("Inventory full for relics.");
-    }
-  }
-
-  const scroll = pickupAt(state.spellDrops, nx, ny);
-  if (scroll) learnOrRankSpell(scroll.spell, nx, ny);
-
-  const weaponDrop = pickupAt(state.weaponDrops, nx, ny);
-  if (weaponDrop) {
-    const weapon = weaponDrop.weapon;
-    generateAiLoot(weapon.type || "enemy").then((aiWeapon) => {
-      const merged = { ...weapon, ...aiWeapon, type: (aiWeapon.type || weapon.type || "sword").toLowerCase() };
-      equipWeapon(merged);
-      narrateCombat(`You found ${merged.name}, a ${merged.animation || "mystic"} weapon.`);
-    });
-  }
 }
 
 function learnOrRankSpell(spell, nx, ny) {
@@ -94,120 +46,203 @@ function learnOrRankSpell(spell, nx, ny) {
     state.player.knownSpells.add(spell.id);
     state.player.spellRanks[spell.id] = 1;
     const slots = state.player.spellSlots;
-    const emptySlot = ["z", "x", "c", "v"].find((k) => !slots[k]);
+    const slotKeys = ["z", "x", "c", "v", "q", "e"].slice(0, state.player.maxSpellSlots || 4);
+    const emptySlot = slotKeys.find((k) => !slots[k]);
     if (emptySlot) slots[emptySlot] = spell.id;
     setMessage(`Learned ${spell.name}${emptySlot ? ` (slotted to ${emptySlot.toUpperCase()})` : " (open B to slot)"}.`);
+    if (state.player.knownSpells.size > MAX_KNOWN_SPELLS) openSpellDiscard();
   }
 }
 
-function descend() {
-  if (state.bossAlive) { setMessage("A boss still guards this floor."); enemyTurn(); return; }
-  if (state.awaitingShop) { setMessage("Visit the shop first."); return; }
+function openChest(chest) {
+  chest.opened = true;
+  const { loot } = chest;
+  const lines = [];
+  if (loot.gold) {
+    state.player.gold += loot.gold;
+    state.stats.goldEarned += loot.gold;
+    lines.push(`<span style="color:#ffd166"><strong>${loot.gold} gold</strong></span>`);
+  }
+  if (loot.potion) {
+    const heal = rnd(12, 20);
+    state.player.hp = Math.min(state.player.maxHp, state.player.hp + heal);
+    lines.push(`<span style="color:#84f6a6"><strong>Healing Potion</strong> — restored ${heal} HP</span>`);
+  }
+  if (loot.relic) {
+    if (state.player.inventory.length < 6) {
+      state.player.inventory.push(loot.relic);
+      lines.push(`<span style="color:#fca5ff"><strong>Relic: ${loot.relic.name}</strong> — ${loot.relic.desc}</span>`);
+    } else {
+      lines.push(`<span style="color:#b8b5e9">Relic left behind (inventory full).</span>`);
+    }
+  }
+  if (loot.spell) {
+    const known = state.player.knownSpells.has(loot.spell.id);
+    const atCap = !known && state.player.knownSpells.size >= 6;
+    learnOrRankSpell(loot.spell, chest.x, chest.y);
+    if (atCap) lines.push(`<span style="color:#b8b5e9">Scroll of <strong>${loot.spell.name}</strong> pawned for 12g (book full).</span>`);
+    else if (known) lines.push(`<span style="color:#6be4ff"><strong>${loot.spell.name}</strong> ranked up.</span>`);
+    else lines.push(`<span style="color:#6be4ff"><strong>Learned ${loot.spell.name}</strong></span>`);
+  }
+  if (loot.weapon) {
+    generateAiLoot(loot.weapon.type || "enemy").then((ai) => {
+      const merged = { ...loot.weapon, ...ai, type: (ai.type || loot.weapon.type || "sword").toLowerCase() };
+      equipWeapon(merged);
+    });
+    lines.push(`<span style="color:#ffc46e"><strong>Weapon: ${loot.weapon.name}</strong></span>`);
+  }
+  if (loot.spellPoints) {
+    state.player.spellPoints += loot.spellPoints;
+    lines.push(`<span style="color:#c79bff"><strong>+${loot.spellPoints} Spell Point${loot.spellPoints > 1 ? "s" : ""}</strong></span>`);
+  }
+  spawnBurst(chest.x, chest.y, "#ffd166", 14);
+  ui.chestLoot.innerHTML = lines.join("<br>");
+  ui.chestOverlay.classList.remove("hidden");
+  state.chestOpen = true;
+}
 
-  // record how this floor ended
-  const hadBoss = state.floor % 5 === 0;
-  state.stats.floorLog[state.floor - 1] = hadBoss ? "boss" : "cleared";
-  state.stats.floorsCleared = Math.max(state.stats.floorsCleared, state.floor);
+function snapshotFloor() {
+  state.floorCache[state.floor] = {
+    map: state.map,
+    rooms: state.rooms,
+    enemies: state.enemies,
+    stairs: state.stairs,
+    stairsUp: state.stairsUp,
+    floorEffects: state.floorEffects,
+    bossAlive: state.bossAlive,
+    interactables: state.interactables,
+    buildings: state.buildings,
+    trees: state.trees,
+    paths: state.paths,
+    fountains: state.fountains,
+    chests: state.chests
+  };
+}
+
+function restoreFloor(floor) {
+  const c = state.floorCache[floor];
+  state.map = c.map;
+  state.rooms = c.rooms;
+  state.enemies = c.enemies;
+  state.stairs = c.stairs;
+  state.stairsUp = c.stairsUp;
+  state.floorEffects = c.floorEffects;
+  state.bossAlive = c.bossAlive;
+  state.interactables = c.interactables || [];
+  state.buildings = c.buildings || [];
+  state.trees = c.trees || [];
+  state.paths = c.paths || [];
+  state.fountains = c.fountains || [];
+  state.chests = c.chests || [];
+}
+
+function enterFloor(floor, { fromAbove }) {
+  state.floor = floor;
+  if (state.floorCache[floor]) {
+    restoreFloor(floor);
+  } else if (floor === 0) {
+    buildTown();
+    return;
+  } else {
+    buildFloor();
+  }
+  if (floor === 0) {
+    const entry = state.interactables.find((i) => i.kind === "dungeon");
+    if (entry) { state.player.x = entry.x - 1; state.player.y = entry.y; }
+  } else if (fromAbove && state.stairsUp) {
+    state.player.x = state.stairsUp.x;
+    state.player.y = state.stairsUp.y;
+  } else if (!fromAbove && state.stairs) {
+    state.player.x = state.stairs.x;
+    state.player.y = state.stairs.y;
+  }
+}
+
+export function enterTown() {
+  if (state.started) snapshotFloor();
+  enterFloor(0, { fromAbove: false });
+  setMessage("You return to town. The air is peaceful here.");
+}
+
+export function returnToTown() {
+  if (state.floor === 0 || !state.started || state.over) return;
+  snapshotFloor();
+  enterFloor(0, { fromAbove: false });
+  setMessage("A recall rune whisks you back to town.");
+}
+
+function descend() {
+  if (state.bossAlive) { setMessage("A boss still guards this floor."); return; }
+  if (state.awaitingShop) { setMessage("Finish at the shop first."); return; }
+
+  if (state.floor > 0) {
+    const hadBoss = state.floor % 5 === 0;
+    state.stats.floorLog[state.floor - 1] = hadBoss ? "boss" : "cleared";
+    state.stats.floorsCleared = Math.max(state.stats.floorsCleared, state.floor);
+  }
 
   if (state.floor >= maxFloor) { endRunVictory(); return; }
 
-  state.floor += 1;
-  state.player.baseAtk += 1;
-  state.player.maxHp += 2;
-  state.player.maxMana = levelManaPool(state.floor);
-  recalcAttack();
-  state.player.mana = state.player.maxMana;
-  state.player.hp = Math.min(state.player.maxHp, state.player.hp + 5);
-  setMessage(`You descend to floor ${state.floor}.`);
-  buildFloor();
+  snapshotFloor();
+  const next = state.floor + 1;
+  const firstVisit = !state.floorCache[next];
+  if (firstVisit) {
+    state.player.baseAtk += 1;
+    state.player.maxHp += 2;
+    state.player.maxMana = levelManaPool(next);
+    recalcAttack();
+    state.player.mana = state.player.maxMana;
+    state.player.hp = Math.min(state.player.maxHp, state.player.hp + 5);
+    state.player.spellPoints += 1;
+  }
+  enterFloor(next, { fromAbove: true });
+  setMessage(firstVisit ? `You descend to floor ${next}.` : `You return to floor ${next}.`);
+}
+
+function ascend() {
+  if (state.floor === 0) { setMessage("You are already in town."); return; }
+  snapshotFloor();
+  const prev = state.floor - 1;
+  enterFloor(prev, { fromAbove: false });
+  setMessage(prev === 0 ? "You climb back up to town." : `You ascend to floor ${prev}.`);
+}
+
+function enterInteractable(i) {
+  if (i.kind === "shop") { state.awaitingShop = true; openShop(i.shop); return; }
+  if (i.kind === "dungeon") { descend(); return; }
 }
 
 export function tryMove(dx, dy) {
-  if (state.over || !state.started || state.awaitingShop || state.bossBattle) return;
+  if (state.over || !state.started || state.awaitingShop) return;
+  if (state.player.moveTimer > 0) return;
+  const hasted = state.player.statuses && state.player.statuses.some((s) => s.kind === "haste");
+  state.player.moveTimer = hasted ? Math.floor(PLAYER_MOVE_COOLDOWN_MS / 2) : PLAYER_MOVE_COOLDOWN_MS;
   const nx = state.player.x + dx;
   const ny = state.player.y + dy;
-  if (!isWalkable(nx, ny)) { setMessage("You bump into rough stone."); enemyTurn(); return; }
-  if (isWallBlocked(nx, ny)) { setMessage("Thornwall blocks your path."); enemyTurn(); return; }
+  if (!isWalkable(nx, ny)) { setMessage("You bump into rough stone."); return; }
+  if (isWallBlocked(nx, ny)) { setMessage("Thornwall blocks your path."); return; }
 
   const foe = enemyAt(nx, ny);
-  if (foe) { playerAttack(foe); enemyTurn(); return; }
+  if (foe) { playerAttack(foe); return; }
 
   state.player.x = nx;
   state.player.y = ny;
 
-  handlePickups(nx, ny);
+  const chest = (state.chests || []).find((c) => c.x === nx && c.y === ny && !c.opened);
+  if (chest) openChest(chest);
 
-  if (state.stairs.x === nx && state.stairs.y === ny) { descend(); return; }
-
-  enemyTurn();
-}
-
-function enemyStepToward(enemy) {
-  let dx = 0;
-  let dy = 0;
-  if (Math.abs(state.player.x - enemy.x) > Math.abs(state.player.y - enemy.y)) {
-    dx = state.player.x > enemy.x ? 1 : -1;
-  } else {
-    dy = state.player.y > enemy.y ? 1 : -1;
-  }
-  const tx = enemy.x + dx;
-  const ty = enemy.y + dy;
-  const blocked = !isWalkable(tx, ty) || isWallBlocked(tx, ty) || enemyAt(tx, ty) || (state.player.x === tx && state.player.y === ty);
-  if (blocked) return;
-  enemy.x = tx;
-  enemy.y = ty;
-  const mine = state.floorEffects.find((f) => f.kind === "mine" && f.x === enemy.x && f.y === enemy.y && f.turns > 0);
-  if (mine) triggerMine(mine);
-  const trap = state.floorEffects.find((f) => f.kind === "trap" && f.x === enemy.x && f.y === enemy.y && f.turns > 0);
-  if (trap) triggerTrap(trap, enemy);
-}
-
-export function enemyTurn() {
-  if (state.over || state.awaitingShop || state.bossBattle) return;
-  tickFloorEffects();
-  tickStatuses(state.player);
-  if (state.player.hp <= 0) {
-    state.player.hp = 0;
-    endRun("Lingering spell effects overwhelm you.");
-    return;
-  }
-  for (const enemy of state.enemies) {
-    tickStatuses(enemy);
-    if (enemy.hp <= 0) continue;
-
-    if (hasStatus(enemy, "stun")) continue;
-    if (hasStatus(enemy, "chill")) {
-      enemy.chillSkip = !enemy.chillSkip;
-      if (enemy.chillSkip) continue;
-    }
-    const atkMod = hasStatus(enemy, "shock") ? -2 : 0;
-
-    const dist = distance(enemy, state.player);
-    if (dist === 1) {
-      const raw = Math.max(1, rnd(enemy.atk - 1, enemy.atk + 1) + atkMod);
-      const dmg = playerTakeDamage(raw);
-      spawnBurst(state.player.x, state.player.y, "#ff758f", 7);
-      if (state.player.hp <= 0) {
-        state.player.hp = 0;
-        endRun(`Slain by ${enemy.name} on floor ${state.floor}.`);
-        return;
-      }
-      setMessage(`${enemy.name} hits you for ${dmg}.`);
-      continue;
-    }
-    if (dist > enemy.vision) continue;
-    enemyStepToward(enemy);
-  }
-  clearDeadEnemies();
+  const interact = state.interactables.find((i) => i.x === nx && i.y === ny);
+  if (interact) { enterInteractable(interact); return; }
+  if (state.stairs && state.stairs.x === nx && state.stairs.y === ny) { descend(); return; }
+  if (state.stairsUp && state.stairsUp.x === nx && state.stairsUp.y === ny) { ascend(); return; }
 }
 
 export function useRelic(index) {
-  if (state.awaitingShop || state.bossBattle) return;
+  if (state.awaitingShop) return;
   const relic = state.player.inventory[index];
   if (!relic) return;
   relic.use();
   state.player.inventory.splice(index, 1);
-  enemyTurn();
 }
 
 export function chooseClass(c, opts = {}) {
@@ -215,7 +250,8 @@ export function chooseClass(c, opts = {}) {
   if (heroName) state.heroName = heroName;
   if (seed) state.seed = seed;
 
-  state.floor = 1;
+  state.floor = 0;
+  state.floorCache = {};
   state.over = false;
   state.won = false;
   state.lastKilledBy = "";
@@ -225,25 +261,30 @@ export function chooseClass(c, opts = {}) {
   const starts = c.startSpells || ["bolt", "nova", "mend"];
   state.player.knownSpells = new Set(starts);
   state.player.spellRanks = Object.fromEntries(starts.map((id) => [id, 1]));
-  state.player.spellSlots = { z: starts[0] || null, x: starts[1] || null, c: starts[2] || null, v: starts[3] || null };
+  state.player.spellSlots = { z: starts[0] || null, x: starts[1] || null, c: starts[2] || null, v: starts[3] || null, q: starts[4] || null, e: starts[5] || null };
+  state.player.maxSpellSlots = c.maxSpellSlots || 4;
+  state.player.maxWeapons = c.maxWeapons || 3;
   state.player.statuses = [];
   state.player.lastOffensive = null;
 
   state.player.className = c.name;
   state.player.weapon = c.weapon;
   state.player.weaponBonus = 1;
-  state.player.weaponType = c.weapon.toLowerCase().includes("staff") ? "wand" : "sword";
+  state.player.weaponType = c.weaponType || (c.weapon.toLowerCase().includes("staff") ? "wand" : "sword");
   state.player.maxHp = c.hp;
   state.player.hp = c.hp;
   state.player.maxMana = levelManaPool(state.floor) + Math.floor(c.mana / 6);
   state.player.mana = state.player.maxMana;
   state.player.baseAtk = c.atk;
   state.player.spellPower = c.spellPower;
-  state.player.arrows = 12;
-  state.player.backpack = [{ name: c.weapon, atk: 1, mana: 0, type: state.player.weaponType, effectiveAgainst: "any" }];
+  state.player.arrows = c.startArrows ?? 12;
+  state.player.backpack = [
+    { name: c.weapon, atk: 1, mana: 0, type: state.player.weaponType, effectiveAgainst: "any" },
+    ...(c.extraItems || []).map((item) => ({ atk: 1, mana: 0, effectiveAgainst: "any", ...item }))
+  ];
   recalcAttack();
   state.started = true;
-  buildFloor();
+  enterFloor(0, { fromAbove: false });
   ui.classOverlay.classList.add("hidden");
-  setMessage(`${state.heroName || "You"} begins as a ${c.name}.`);
+  setMessage(`${state.heroName || "You"} arrives in town as a ${c.name}.`);
 }

@@ -67,7 +67,7 @@ export function effect(ctx) {
     const enemy = enemyAt(tile.x, tile.y);
     if (enemy) {
       damageEnemy(enemy, baseDmg, spell.school);
-      applyStatus(enemy, "chill", 3, 1);
+      applyStatus(enemy, "chill", 10 + ctx.rank * 2, 1);
       spawnBurst(enemy.x, enemy.y, SCHOOL_COLORS.frost, 8);
       hit++;
     }
