@@ -472,6 +472,153 @@ export const BUILDING_SPRITES = {
   enchanter: ENCHANTER_STAND_SPRITE
 };
 
+// Interior palettes for shop interior scenes
+export const SHOP_INTERIOR_PALETTES = {
+  weapon:    { floorA: "#5c3a1a", floorB: "#6a4a28", wall: "#3a2a1a", wallTop: "#7a4a2a", accent: "#ffd166", banner: "#a8323e" },
+  alchemist: { floorA: "#2d4a6a", floorB: "#3a5a78", wall: "#1a2a3e", wallTop: "#3a5a78", accent: "#7bdff2", banner: "#3e9e9e" },
+  arcanum:   { floorA: "#2a1a4e", floorB: "#3a2a5e", wall: "#1a0a2e", wallTop: "#4a3a6e", accent: "#c79bff", banner: "#6b3a9e" },
+  curio:     { floorA: "#3a2a30", floorB: "#4a3a40", wall: "#1a0a10", wallTop: "#5a4a50", accent: "#fca5ff", banner: "#9b3a7e" },
+  enchanter: { floorA: "#1f4a4a", floorB: "#2f5a5a", wall: "#0f2a2a", wallTop: "#3a8a8a", accent: "#84f6a6", banner: "#a8323e" }
+};
+
+// Vendor sprites — 24x24, drawn at vendor tile
+export const VENDOR_SPRITES = {
+  weapon: [
+    // Burly blacksmith — bald, leather apron, hammer
+    ["#c89a6d", 9, 2, 6, 5],     // head
+    ["#a87a4d", 9, 2, 6, 1],     // brow
+    ["#1a1a1a", 10, 4, 1, 1], ["#1a1a1a", 13, 4, 1, 1], // eyes
+    ["#a87a4d", 9, 7, 6, 1],     // beard line
+    ["#3a2a1a", 9, 8, 6, 2],     // collar
+    ["#5c3a1a", 7, 10, 10, 8],   // apron
+    ["#3a2a1a", 7, 10, 10, 1],   // apron strap
+    ["#c89a6d", 6, 11, 1, 4], ["#c89a6d", 17, 11, 1, 4], // arms
+    ["#7a4a2a", 16, 13, 4, 5],   // hammer head visible
+    ["#3a2a1a", 18, 14, 1, 4]    // hammer handle hint
+  ],
+  alchemist: [
+    // Eccentric herbalist — green hood, vial
+    ["#3e6b3e", 8, 1, 8, 4],     // hood top
+    ["#2a4a2a", 8, 4, 8, 1],     // hood shadow
+    ["#d8a478", 9, 5, 6, 4],     // face
+    ["#1a1a1a", 10, 7, 1, 1], ["#1a1a1a", 13, 7, 1, 1], // eyes
+    ["#3e6b3e", 7, 9, 10, 9],    // robe
+    ["#2a4a2a", 7, 17, 10, 1],   // robe hem
+    ["#7bdff2", 14, 12, 3, 4],   // glowing vial
+    ["#a8f3ff", 15, 13, 1, 2],   // vial highlight
+    ["#5a3a20", 14, 11, 3, 1]    // vial cork
+  ],
+  arcanum: [
+    // Robed scholar — pointed hat, glasses
+    ["#2a1a4e", 9, 0, 6, 1],     // hat tip
+    ["#2a1a4e", 8, 1, 8, 2],     // hat brim base
+    ["#4a3a6e", 7, 3, 10, 1],    // hat brim wide
+    ["#d8a478", 9, 4, 6, 4],     // face
+    ["#1a1a1a", 10, 6, 1, 1], ["#1a1a1a", 13, 6, 1, 1], // eyes
+    ["#c79bff", 9, 5, 1, 1], ["#c79bff", 14, 5, 1, 1], // glasses glints
+    ["#6b3a9e", 7, 8, 10, 10],   // robe
+    ["#4a1a7a", 7, 17, 10, 1],   // robe hem
+    ["#fca5ff", 14, 12, 2, 2]    // glowing scroll
+  ],
+  curio: [
+    // Mysterious traveler — wide hat, scarf, gem
+    ["#1a0a10", 6, 2, 12, 2],    // wide brim
+    ["#3a2a30", 8, 0, 8, 3],     // hat top
+    ["#d8a478", 9, 4, 6, 4],     // face
+    ["#1a1a1a", 10, 6, 1, 1], ["#1a1a1a", 13, 6, 1, 1], // eyes
+    ["#9b3a7e", 8, 8, 8, 2],     // scarf
+    ["#fca5ff", 11, 8, 2, 1],    // scarf gem
+    ["#5a3a40", 7, 10, 10, 8],   // cloak
+    ["#3a2a30", 7, 17, 10, 1]    // cloak hem
+  ],
+  enchanter: [
+    // Silver-haired figure with rings, tunic
+    ["#e8e8ec", 8, 2, 8, 4],     // silver hair
+    ["#b4b4c0", 8, 5, 8, 1],     // hair shadow
+    ["#d8a478", 9, 5, 6, 4],     // face
+    ["#1a1a1a", 10, 7, 1, 1], ["#1a1a1a", 13, 7, 1, 1], // eyes
+    ["#84f6a6", 9, 6, 1, 1], ["#84f6a6", 14, 6, 1, 1], // glowing eyes accent
+    ["#3a8a8a", 7, 9, 10, 9],    // tunic
+    ["#1f4a4a", 7, 17, 10, 1],   // tunic hem
+    ["#84f6a6", 11, 12, 2, 2],   // glowing rune
+    ["#cefcdb", 11, 13, 1, 1]    // rune highlight
+  ]
+};
+
+export const SHOP_VENDORS = {
+  weapon: {
+    name: "Borin",
+    title: "BLACKSMITH",
+    greet: ["Need a weapon. Buy or leave.", "Make it quick.", "Steel doesn't sharpen itself."],
+    farewell: ["Don't waste my time.", "Hmf. Go.", "Come back when you're serious."]
+  },
+  alchemist: {
+    name: "Lirien",
+    title: "ALCHEMIST",
+    greet: ["Ahh, traveler — what ails you today?", "The kettle's warm. What can I brew for you?", "Fresh tonics, just bottled."],
+    farewell: ["May the moss favor you.", "Wander gently, friend.", "The wilds remember your name."]
+  },
+  arcanum: {
+    name: "Master Vex",
+    title: "ARCANUM",
+    greet: ["Knowledge has its price. State your need.", "The scrolls have been waiting.", "Come, examine the work."],
+    farewell: ["Study well, apprentice.", "The lattice holds. Until next time.", "Go — and read carefully."]
+  },
+  curio: {
+    name: "Madame Sable",
+    title: "CURIOS",
+    greet: ["Mmm. What catches your eye, hm?", "Oh, you again. Lucky for you.", "Every piece has a story. Or two."],
+    farewell: ["Until our paths cross again...", "The fates owe us a favor now.", "Take care — and keep your secrets."]
+  },
+  enchanter: {
+    name: "The Stranger",
+    title: "ENCHANTER",
+    greet: ["Iron remembers. Bring it to me.", "Steel sings, when it knows the words.", "Set your blade upon the cloth."],
+    farewell: ["Steel sings on.", "May the binding hold true.", "The runes will keep their watch."]
+  }
+};
+
+// Furniture sprites for shop interiors
+export const COUNTER_SPRITE = [
+  ["#7a4a2a", 0, 0, 24, 6],     // top
+  ["#5c3a1a", 0, 6, 24, 2],     // edge
+  ["#3a2a1a", 0, 8, 24, 16],    // front
+  ["#1a0e08", 0, 23, 24, 1]     // ground shadow
+];
+
+export const SHELF_SPRITE = [
+  ["#5c3a1a", 2, 4, 20, 2],
+  ["#5c3a1a", 2, 12, 20, 2],
+  ["#3a2a1a", 2, 4, 2, 18],
+  ["#3a2a1a", 20, 4, 2, 18],
+  ["#7a4a2a", 4, 6, 4, 6],
+  ["#7a4a2a", 12, 6, 4, 6],
+  ["#7a4a2a", 4, 14, 4, 6]
+];
+
+export const BANNER_SPRITE = [
+  ["#3a2a1a", 4, 0, 16, 2],
+  ["#a8323e", 4, 2, 16, 14],
+  ["#5c1a20", 4, 14, 16, 2],
+  ["#e8d8a4", 8, 6, 8, 4]
+];
+
+export const EXIT_DOOR_SPRITE = [
+  ["#3a2a1a", 4, 2, 16, 22],
+  ["#5c3a1a", 6, 4, 12, 18],
+  ["#7a4a2a", 6, 4, 12, 1],
+  ["#7a4a2a", 6, 21, 12, 1],
+  ["#ffd166", 16, 12, 2, 2]
+];
+
+export const EXIT_RUG_SPRITE = [
+  ["#7a3a3a", 0, 4, 24, 16],
+  ["#5c2a2a", 0, 4, 24, 2],
+  ["#5c2a2a", 0, 18, 24, 2],
+  ["#a85a5a", 4, 8, 16, 8],
+  ["#ffd166", 11, 11, 2, 2]
+];
+
 export const DUNGEON_ENTRANCE_SPRITE = [
   // Battlements
   ["#2a2a3a", 10, 2, 76, 6],

@@ -6,7 +6,8 @@ import { playerAttack } from "./combat.js";
 import { rankOf } from "./spells/index.js";
 import { equipWeapon, recalcAttack, generateAiLoot } from "./items.js";
 import { openSpellDiscard } from "./discard.js";
-import { buildFloor, buildTown } from "./map.js";
+import { buildFloor, buildTown, buildShopInterior, shopAt, dungeonEntranceAt } from "./map.js";
+import { SHOP_VENDORS } from "./config.js";
 import { openShop } from "./shop.js";
 import { SCHOOL_COLORS } from "./config.js";
 import { showResult } from "./result.js";
@@ -295,8 +296,55 @@ function openFloorSelector() {
   state.applyOpen = true;
 }
 
+export function enterShopInterior(kind) {
+  state.townBackup = {
+    map: state.map,
+    rooms: state.rooms,
+    enemies: state.enemies,
+    interactables: state.interactables,
+    buildings: state.buildings,
+    trees: state.trees,
+    paths: state.paths,
+    fountains: state.fountains,
+    chests: state.chests,
+    floorEffects: state.floorEffects,
+    returnPos: { x: state.player.x, y: state.player.y }
+  };
+  buildShopInterior(kind);
+  const v = SHOP_VENDORS[kind];
+  if (v) setMessage(`${v.name}, ${v.title.toLowerCase()}: "${pickFrom(v.greet)}"`);
+  else setMessage("You step inside.");
+}
+
+function pickFrom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+export function exitShopInterior() {
+  if (!state.townBackup) return;
+  const b = state.townBackup;
+  state.map = b.map;
+  state.rooms = b.rooms;
+  state.enemies = b.enemies;
+  state.interactables = b.interactables;
+  state.buildings = b.buildings;
+  state.trees = b.trees;
+  state.paths = b.paths;
+  state.fountains = b.fountains;
+  state.chests = b.chests;
+  state.floorEffects = b.floorEffects;
+  state.player.x = b.returnPos.x;
+  state.player.y = b.returnPos.y;
+  state.townBackup = null;
+  const kind = state.shopInterior?.kind;
+  state.shopInterior = null;
+  const v = kind && SHOP_VENDORS[kind];
+  if (v) setMessage(`"${pickFrom(v.farewell)}"`);
+  else setMessage("You step back outside.");
+}
+
 function enterInteractable(i) {
-  if (i.kind === "shop") { state.awaitingShop = true; openShop(i.shop); return; }
+  if (i.kind === "shop") { enterShopInterior(i.shop); return; }
+  if (i.kind === "vendor") { state.awaitingShop = true; openShop(i.shop); return; }
+  if (i.kind === "shop_exit") { exitShopInterior(); return; }
   if (i.kind === "dungeon") { openFloorSelector(); return; }
 }
 
@@ -307,7 +355,15 @@ export function tryMove(dx, dy) {
   state.player.moveTimer = hasted ? Math.floor(PLAYER_MOVE_COOLDOWN_MS / 2) : PLAYER_MOVE_COOLDOWN_MS;
   const nx = state.player.x + dx;
   const ny = state.player.y + dy;
-  if (!isWalkable(nx, ny)) { setMessage("You bump into rough stone."); return; }
+  if (!isWalkable(nx, ny)) {
+    if (state.floor === 0 && !state.shopInterior) {
+      const shopKind = shopAt(nx, ny);
+      if (shopKind) { enterShopInterior(shopKind); return; }
+      if (dungeonEntranceAt(nx, ny)) { openFloorSelector(); return; }
+    }
+    setMessage("You bump into rough stone.");
+    return;
+  }
   if (isWallBlocked(nx, ny)) { setMessage("Thornwall blocks your path."); return; }
 
   const foe = enemyAt(nx, ny);

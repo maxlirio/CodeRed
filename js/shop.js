@@ -1,5 +1,5 @@
 import { state, ui } from "./state.js";
-import { WEAPON_POOL } from "./config.js";
+import { WEAPON_POOL, SHOP_VENDORS } from "./config.js";
 import { pick, setMessage } from "./utils.js";
 import {
   equipWeapon, makeRelic, makePotion, recalcAttack,
@@ -188,29 +188,45 @@ export function openShop(kind = "weapon") {
   activeShopKind = SHOPS[kind] ? kind : "weapon";
   enchanterPreview = null;
   enchanterPending = false;
+  activeGreeting = null;
   ui.shopOverlay.classList.remove("hidden");
   renderShop();
 }
 
 export function closeShop() {
   state.awaitingShop = false;
+  const kind = activeShopKind;
   activeShopKind = null;
   enchanterPreview = null;
   enchanterPending = false;
+  activeGreeting = null;
   ui.shopOverlay.classList.add("hidden");
-  setMessage("You step back outside.");
+  const v = SHOP_VENDORS[kind];
+  if (v) setMessage(`"${pickFrom(v.farewell)}"`);
+  else setMessage("You step away from the counter.");
 }
+
+function pickFrom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+let activeGreeting = null;
 
 export function renderShop() {
   const shop = SHOPS[activeShopKind] || SHOPS.weapon;
   if (shop.custom && activeShopKind === "enchanter") { renderEnchanter(); return; }
 
-  ui.shopGold.textContent = `${shop.title} — Gold: ${state.player.gold}`;
+  const v = SHOP_VENDORS[activeShopKind];
+  const title = v ? `${v.title} — ${v.name}` : shop.title;
+  const dialogue = activeGreeting || (v ? pickFrom(v.greet) : "");
+  activeGreeting = dialogue;
+  ui.shopGold.innerHTML =
+    `${title} — Gold: ${state.player.gold}` +
+    (dialogue ? `<br><span style="color:var(--ink-dim);font-style:italic">"${dialogue}"</span>` : "");
+
   ui.shopChoices.innerHTML = "";
   for (const offer of shop.offers) {
     const btn = document.createElement("button");
     btn.className = "choice";
-    btn.innerHTML = `<strong>${offer.name}</strong><span>Spend gold for upgrades.</span>`;
+    btn.innerHTML = `<strong>${offer.name}</strong>`;
     btn.addEventListener("click", () => {
       if (state.player.gold < offer.cost) { setMessage("Not enough gold."); return; }
       state.player.gold -= offer.cost;

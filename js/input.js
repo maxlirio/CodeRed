@@ -17,7 +17,7 @@ const MOVE_KEYS = {
 const HOTKEYS = new Set([
   "arrowup", "arrowdown", "arrowleft", "arrowright",
   "w", "a", "s", "d", " ",
-  "z", "x", "c", "v", "q", "e", "f", "j", "n", "b", "?",
+  "z", "x", "c", "v", "q", "e", "f", "j", "n", "b", "?", "+", "=",
   "1", "2", "3", "4", "5", "6", "escape"
 ]);
 
@@ -66,6 +66,12 @@ function toggleAi() {
   setMessage(`AI enchants ${state.aiEnabled ? "enabled" : "disabled"}.`);
 }
 
+function toggleFullscreen() {
+  state.fullscreen = !state.fullscreen;
+  document.body.classList.toggle("fullscreen", state.fullscreen);
+  setMessage(state.fullscreen ? "Stats hidden. Press + to show." : "Stats restored.");
+}
+
 function toggleTutorial(force) {
   const open = typeof force === "boolean" ? force : tutorialOverlay.classList.contains("hidden");
   tutorialOverlay.classList.toggle("hidden", !open);
@@ -107,6 +113,8 @@ function onKeyDown(e) {
   }
 
   if (k === "j") useWeaponAbility();
+
+  if (k === "+" || k === "=") toggleFullscreen();
 
   if (k === "n") toggleAi();
 

@@ -67,6 +67,13 @@ body {
   .touch-controls { grid-area: touch; }
 }
 
+body.fullscreen .hud { display: none; }
+body.fullscreen { grid-template-columns: 1fr; padding: 6px; }
+body.fullscreen canvas {
+  height: calc(100vh - 28px);
+  max-width: none;
+}
+
 .frame {
   border: 3px solid var(--frame);
   outline: 1px solid var(--frame-lit);

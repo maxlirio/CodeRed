@@ -178,6 +178,73 @@ function placePath(x, y) {
   if (state.map[y][x] === 0) state.paths.push({ x, y });
 }
 
+export function shopAt(x, y) {
+  if (!state.buildings) return null;
+  for (const b of state.buildings) {
+    if (b.shop && x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h) {
+      return b.shop;
+    }
+  }
+  return null;
+}
+
+export function dungeonEntranceAt(x, y) {
+  if (!state.buildings) return null;
+  for (const b of state.buildings) {
+    if (!b.shop && x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h) return true;
+  }
+  return false;
+}
+
+// Builds a small interior scene inside the canvas. Mutates state.map and friends.
+// Player spawns near the south side; vendor sits center-back; exit rug at south center.
+export function buildShopInterior(kind) {
+  state.map = Array.from({ length: rows }, () => Array(cols).fill(1));
+  state.rooms = [];
+  state.enemies = [];
+  state.interactables = [];
+  state.buildings = [];
+  state.trees = [];
+  state.paths = [];
+  state.fountains = [];
+  state.chests = [];
+  state.floorEffects = [];
+
+  const w = 14, h = 10;
+  const x0 = Math.floor((cols - w) / 2);
+  const y0 = Math.floor((rows - h) / 2);
+  for (let y = y0; y < y0 + h; y++) {
+    for (let x = x0; x < x0 + w; x++) state.map[y][x] = 0;
+  }
+  state.rooms = [{ x: x0, y: y0, w, h, cx: x0 + Math.floor(w / 2), cy: y0 + Math.floor(h / 2) }];
+
+  const cx = x0 + Math.floor(w / 2);
+  const vendorPos = { x: cx, y: y0 + 2 };
+  const exitPos = { x: cx, y: y0 + h - 1 };
+  const counterY = y0 + 3;
+
+  state.interactables.push({ x: vendorPos.x, y: vendorPos.y, kind: "vendor", shop: kind, name: "Vendor" });
+  state.interactables.push({ x: exitPos.x, y: exitPos.y, kind: "shop_exit", name: "Exit" });
+
+  state.shopInterior = {
+    kind,
+    bounds: { x0, y0, w, h },
+    vendor: vendorPos,
+    exit: exitPos,
+    counterY,
+    counterX0: x0 + 2,
+    counterX1: x0 + w - 3,
+    shelves: [
+      { x: x0 + 1, y: y0 + 2 },
+      { x: x0 + w - 2, y: y0 + 2 }
+    ],
+    banner: { x: cx - 1, y: y0 + 1 }
+  };
+
+  state.player.x = cx;
+  state.player.y = y0 + h - 2;
+}
+
 export function buildTown() {
   state.map = Array.from({ length: rows }, () => Array(cols).fill(0));
   for (let y = 0; y < rows; y++) { state.map[y][0] = 1; state.map[y][cols - 1] = 1; }

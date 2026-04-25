@@ -7,7 +7,10 @@ import {
   BUILDING_SPRITES, DUNGEON_ENTRANCE_SPRITE,
   TREE_SPRITE, FOUNTAIN_SPRITE,
   STAIRS_DOWN_SPRITE, STAIRS_UP_SPRITE,
-  CHEST_CLOSED_SPRITE, CHEST_OPEN_SPRITE
+  CHEST_CLOSED_SPRITE, CHEST_OPEN_SPRITE,
+  SHOP_INTERIOR_PALETTES, VENDOR_SPRITES,
+  COUNTER_SPRITE, SHELF_SPRITE, BANNER_SPRITE,
+  EXIT_DOOR_SPRITE, EXIT_RUG_SPRITE
 } from "./config.js";
 import { updateUi } from "./ui.js";
 import { renderSpellAim, renderAllSpellFx } from "./spells/index.js";
@@ -135,6 +138,7 @@ function isPathTile(x, y) {
 }
 
 function drawMap() {
+  if (state.shopInterior) { drawInteriorMap(); return; }
   const inTown = state.floor === 0;
   const floorA = inTown ? COLORS.townFloor : COLORS.floor;
   const floorB = inTown ? COLORS.townFloorShade : COLORS.floorShade;
@@ -151,7 +155,69 @@ function drawMap() {
   }
 }
 
+function drawInteriorMap() {
+  const si = state.shopInterior;
+  const pal = SHOP_INTERIOR_PALETTES[si.kind] || SHOP_INTERIOR_PALETTES.weapon;
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      if (state.map[y][x] === 1) {
+        // Outside the room — pure black to feel cozy
+        drawTile(x, y, "#020204");
+      } else {
+        // Floor inside
+        drawTile(x, y, (x + y) % 2 ? pal.floorA : pal.floorB);
+      }
+    }
+  }
+  // Top wall band — drawn over the inside-top row for depth
+  const { x0, y0, w } = si.bounds;
+  ctx.fillStyle = pal.wall;
+  ctx.fillRect(x0 * tileSize, y0 * tileSize, w * tileSize, tileSize);
+  ctx.fillStyle = pal.wallTop;
+  ctx.fillRect(x0 * tileSize, y0 * tileSize + tileSize - 4, w * tileSize, 4);
+}
+
+function drawShopInteriorFurniture() {
+  const si = state.shopInterior;
+  if (!si) return;
+  const pal = SHOP_INTERIOR_PALETTES[si.kind] || SHOP_INTERIOR_PALETTES.weapon;
+
+  // Banner above vendor
+  const bx = si.banner.x * tileSize;
+  const by = si.banner.y * tileSize;
+  ctx.fillStyle = "#3a2a1a";
+  ctx.fillRect(bx + 4, by - 2, 40, 2);
+  for (const [color, dx, dy, dw, dh] of BANNER_SPRITE) {
+    ctx.fillStyle = color === "#a8323e" ? pal.banner : color;
+    ctx.fillRect(bx + dx, by + dy, dw, dh);
+  }
+  // Accent dot on banner
+  ctx.fillStyle = pal.accent;
+  ctx.fillRect(bx + 22, by + 8, 4, 4);
+
+  // Shelves
+  for (const s of si.shelves) drawSprite(ctx, SHELF_SPRITE, s.x * tileSize, s.y * tileSize);
+
+  // Counter — drawn across the row
+  for (let cx = si.counterX0; cx <= si.counterX1; cx++) {
+    drawSprite(ctx, COUNTER_SPRITE, cx * tileSize, si.counterY * tileSize);
+  }
+
+  // Exit rug
+  drawSprite(ctx, EXIT_RUG_SPRITE, si.exit.x * tileSize, si.exit.y * tileSize);
+  // Exit door visual just behind/over rug for clarity (small)
+  const exDoorX = si.exit.x * tileSize;
+  const exDoorY = si.exit.y * tileSize - 2;
+  ctx.fillStyle = pal.accent;
+  ctx.fillRect(exDoorX + 10, exDoorY, 4, 2);
+
+  // Vendor sprite on vendor tile
+  const vendor = VENDOR_SPRITES[si.kind];
+  if (vendor) drawSprite(ctx, vendor, si.vendor.x * tileSize, si.vendor.y * tileSize);
+}
+
 function drawTownFeatures() {
+  if (state.shopInterior) return;
   if (state.floor !== 0) return;
   for (const t of state.trees || []) drawSprite(ctx, TREE_SPRITE, t.x * tileSize, t.y * tileSize);
   for (const f of state.fountains || []) drawSprite(ctx, FOUNTAIN_SPRITE, f.x * tileSize, f.y * tileSize);
@@ -173,6 +239,7 @@ function drawPickups() {
 
 function drawFog() {
   if (state.floor === 0) return;
+  if (state.shopInterior) return;
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
       const d = Math.abs(x - state.player.x) + Math.abs(y - state.player.y);
@@ -198,7 +265,8 @@ export function draw() {
   drawMap();
   drawFloorEffects();
   drawTownFeatures();
-  drawPickups();
+  if (state.shopInterior) drawShopInteriorFurniture();
+  if (!state.shopInterior) drawPickups();
 
   for (const enemy of state.enemies) { drawEnemy(enemy); drawStatusMarks(enemy); }
   drawHero(state.player.x, state.player.y);
