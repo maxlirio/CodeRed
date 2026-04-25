@@ -9,6 +9,7 @@ const epitaphEl = document.getElementById("resultEpitaph");
 const gridEl = document.getElementById("resultGrid");
 const statsEl = document.getElementById("resultStats");
 const newBtn = document.getElementById("playAgain");
+const downloadBtn = document.getElementById("downloadHero");
 
 const GLYPH = {
   cleared: "▓",
@@ -49,8 +50,64 @@ export function showResult() {
     <span><b>${state.stats.goldEarned}g</b> earned</span>
     <span>weapon: <b>${state.player.weapon}</b></span>
   `;
+  if (downloadBtn) downloadBtn.classList.toggle("hidden", !state.won);
   overlay.classList.remove("hidden");
 }
+
+function buildHeroExport() {
+  const p = state.player;
+  const equipped = (p.backpack || []).find((w) => w.name === p.weapon) || null;
+  const spells = [...(p.knownSpells || [])].map((id) => ({
+    id,
+    rank: (p.spellRanks && p.spellRanks[id]) || 1,
+    augments: (p.spellAugments && p.spellAugments[id]) || []
+  }));
+  return {
+    version: 1,
+    exported: new Date().toISOString(),
+    name: state.heroName || "Nameless Wanderer",
+    className: p.className,
+    stats: {
+      maxHp: p.maxHp,
+      maxMana: p.maxMana,
+      baseAtk: p.baseAtk,
+      spellPower: p.spellPower,
+      spellPoints: p.spellPoints || 0,
+      arrows: p.arrows || 0
+    },
+    weapon: equipped ? {
+      name: equipped.name,
+      type: equipped.type,
+      atk: equipped.atk,
+      mana: equipped.mana || 0,
+      enchant: equipped.enchant || null
+    } : null,
+    spells,
+    run: {
+      floorsCleared: state.stats.floorsCleared,
+      kills: state.stats.kills,
+      bossKills: state.stats.bossKills,
+      spellsCast: state.stats.spellsCast,
+      goldEarned: state.stats.goldEarned
+    }
+  };
+}
+
+function downloadHero() {
+  const data = buildHeroExport();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const safeName = (data.name || "hero").replace(/[^a-z0-9_-]+/gi, "_");
+  a.href = url;
+  a.download = `${safeName}-${data.className || "hero"}.codered.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+if (downloadBtn) downloadBtn.addEventListener("click", downloadHero);
 
 newBtn.addEventListener("click", () => {
   location.hash = "";
