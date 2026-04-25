@@ -401,14 +401,75 @@ const SHOP_PALETTES = {
     door: "#3a2a30", doorFrame: "#1a0a10",
     windowFrame: "#3a2a30", windowGlow: "#fca5ff",
     signBoard: "#3a2a30", sign: "#fca5ff", handle: "#fca5ff"
+  },
+  enchanter: {
+    roof: "#3a8a8a", roofDark: "#1f4a4a",
+    wall: "#4a4a6a", wallDark: "#2a2a3a",
+    foundation: "#1a1a2a",
+    door: "#2a1a4e", doorFrame: "#1a0a2e",
+    windowFrame: "#2a1a4e", windowGlow: "#84f6a6",
+    signBoard: "#2a1a4e", sign: "#84f6a6", handle: "#84f6a6"
   }
 };
+
+const ENCHANTER_STAND_SPRITE = [
+  // Wooden support posts
+  ["#5c3a1a", 18, 22, 4, 58],
+  ["#5c3a1a", 74, 22, 4, 58],
+  // Cross-pole holding the awning
+  ["#7a4a2a", 16, 18, 64, 4],
+  // Striped canopy (cream base)
+  ["#e8d8a4", 14, 8, 68, 14],
+  // Red stripes
+  ["#a8323e", 18, 8, 6, 14],
+  ["#a8323e", 32, 8, 6, 14],
+  ["#a8323e", 46, 8, 6, 14],
+  ["#a8323e", 60, 8, 6, 14],
+  ["#a8323e", 74, 8, 4, 14],
+  // Canopy edges
+  ["#3a1a14", 14, 6, 68, 2],
+  ["#3a1a14", 14, 20, 68, 2],
+  // Scalloped fringe under the awning
+  ["#a8323e", 18, 22, 6, 3],
+  ["#a8323e", 30, 22, 6, 3],
+  ["#a8323e", 42, 22, 6, 3],
+  ["#a8323e", 54, 22, 6, 3],
+  ["#a8323e", 66, 22, 6, 3],
+  ["#a8323e", 76, 22, 4, 3],
+  // Sign hanging from the canopy
+  ["#3a2a1a", 36, 26, 24, 10],
+  ["#7a4a2a", 38, 28, 20, 6],
+  ["#84f6a6", 44, 30, 2, 2],
+  ["#84f6a6", 48, 30, 2, 2],
+  ["#84f6a6", 52, 30, 2, 2],
+  // Counter (wooden table)
+  ["#7a4a2a", 12, 56, 72, 6],
+  ["#5c3a1a", 12, 62, 72, 2],
+  ["#3a2a1a", 12, 64, 72, 16],
+  ["#5c3a1a", 12, 64, 2, 16],
+  ["#5c3a1a", 82, 64, 2, 16],
+  ["#1a0e08", 12, 80, 72, 2],
+  // Glowing enchant orb on the counter (with halo)
+  ["#1f4a4a", 38, 38, 20, 18],
+  ["#3a8a8a", 40, 40, 16, 14],
+  ["#84f6a6", 42, 42, 12, 10],
+  ["#cefcdb", 46, 44, 4, 3],
+  // Orb stand
+  ["#5c3a1a", 44, 54, 8, 4],
+  ["#3a2a1a", 44, 58, 8, 1],
+  // Magical sparkles around the orb
+  ["#84f6a6", 30, 36, 2, 2],
+  ["#84f6a6", 64, 40, 2, 2],
+  ["#cefcdb", 34, 44, 2, 2],
+  ["#cefcdb", 60, 32, 2, 2]
+];
 
 export const BUILDING_SPRITES = {
   weapon:    makeShopSprite(SHOP_PALETTES.weapon),
   alchemist: makeShopSprite(SHOP_PALETTES.alchemist),
   arcanum:   makeShopSprite(SHOP_PALETTES.arcanum),
-  curio:     makeShopSprite(SHOP_PALETTES.curio)
+  curio:     makeShopSprite(SHOP_PALETTES.curio),
+  enchanter: ENCHANTER_STAND_SPRITE
 };
 
 export const DUNGEON_ENTRANCE_SPRITE = [

@@ -4,6 +4,7 @@ import { renderClassChoices } from "./ui.js";
 import { loop } from "./render.js";
 import { attachInput, initTouch } from "./input.js";
 import { setSeed, randomSeedString } from "./rng.js";
+import { initApplyOverlay } from "./augments.js";
 
 // Read a one-shot "play this dungeon" seed from the URL, then clear the URL.
 // After this point, refresh always lands on a clean class screen.
@@ -16,5 +17,6 @@ history.replaceState(null, "", location.pathname);
 renderClassChoices();
 attachInput();
 initTouch();
+initApplyOverlay();
 loop();
 setMessage("Choose your class to start the run.");

@@ -222,6 +222,7 @@ function isPaused() {
   if (state.tutorialOpen) return true;
   if (state.chestOpen) return true;
   if (state.discardOpen) return true;
+  if (state.applyOpen) return true;
   return false;
 }
 

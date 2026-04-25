@@ -3,6 +3,7 @@ import { SCHOOL_COLORS } from "../config.js";
 import { spawnBurst, doScreenShake } from "../fx.js";
 import { setMessage } from "../utils.js";
 import { strokeReticle } from "./_draw.js";
+import { AUGMENT_BY_ID } from "../augments.js";
 
 import * as bolt from "./bolt.js";
 import * as chain from "./chain.js";
@@ -146,7 +147,34 @@ export function spendSpellMana(spell, charged) {
   return cost;
 }
 
-export function castSpell(spell, tx, ty, { charged = false } = {}) {
+function runEffectWithAugments(spell, ctx) {
+  const effect = EFFECTS[spell.id];
+  if (!effect) return { acted: false };
+  const augs = (state.player.spellAugments && state.player.spellAugments[spell.id]) || [];
+
+  // pre-effect flags
+  const prevPiercing = state.castingPiercing;
+  if (augs.includes("phase")) state.castingPiercing = true;
+
+  // damage tracker for siphon
+  const damageBefore = state.castingDamage || 0;
+  state.castingDamage = damageBefore;
+
+  const result = effect(ctx) || { acted: false };
+
+  // post-effect augments (only on actual casts that did something)
+  if (result.acted) {
+    for (const augId of augs) {
+      const aug = AUGMENT_BY_ID[augId];
+      if (aug && typeof aug.apply === "function") aug.apply(spell, ctx);
+    }
+  }
+
+  state.castingPiercing = prevPiercing;
+  return result;
+}
+
+export function castSpell(spell, tx, ty, { charged = false, _echoLevel = 0 } = {}) {
   const chargeMul = charged ? 1.5 : 1;
   const rank = rankOf(spell.id);
   const pow = spellPowerNow();
@@ -161,14 +189,15 @@ export function castSpell(spell, tx, ty, { charged = false } = {}) {
 
   const isCrit = roll.kind === "crit";
   const critMul = isCrit ? 1.7 : 1;
-  const baseDmg = Math.floor((7 + pow + rank * 2) * chargeMul * critMul);
+  const echoMul = _echoLevel > 0 ? 0.5 : 1;
+  const baseDmg = Math.floor((7 + pow + rank * 2) * chargeMul * critMul * echoMul);
 
   spawnBurst(state.player.x, state.player.y, SCHOOL_COLORS[spell.school], 6 + (charged ? 8 : 0));
   if (charged) doScreenShake(4);
   if (isCrit) doScreenShake(3);
 
-  const effect = EFFECTS[spell.id];
-  if (!effect) return { acted: false };
+  if (_echoLevel === 0) state.castingDamage = 0;
+  state.castingDepth = (state.castingDepth || 0) + 1;
 
   const ctx = {
     tx, ty, charged, chargeMul, rank, pow, isCrit, critMul, baseDmg, spell,
@@ -176,7 +205,19 @@ export function castSpell(spell, tx, ty, { charged = false } = {}) {
     cast: castSpell,
     spellsById: SPELL_BY_ID
   };
-  const result = effect(ctx) || { acted: false };
+  const result = runEffectWithAugments(spell, ctx);
+  state.castingDepth -= 1;
+
   if (result.acted) state.stats.spellsCast += 1;
+
+  // Echo augment: cast again at half power, but only at top level
+  if (
+    result.acted &&
+    _echoLevel === 0 &&
+    state.player.spellAugments &&
+    (state.player.spellAugments[spell.id] || []).includes("echo")
+  ) {
+    castSpell(spell, tx, ty, { charged: false, _echoLevel: 1 });
+  }
   return result;
 }

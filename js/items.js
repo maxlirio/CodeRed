@@ -4,6 +4,7 @@ import { srnd, spick } from "./rng.js";
 import { damageNearestEnemy, damageAdjacentEnemies, damageEnemy, clearDeadEnemies } from "./combat.js";
 import { applyStatus, spawnBurst, doScreenShake } from "./fx.js";
 import { openWeaponDiscard } from "./discard.js";
+import { chatGroq, getGroqKey } from "./llm.js";
 
 function makeRelicName() {
   const { left, mid, right } = state.runSeedWords;
@@ -188,15 +189,21 @@ export function makePotion(kind) {
   return make ? make() : null;
 }
 
+function findEquippedWeaponObj() {
+  return state.player.backpack.find((w) => w.name === state.player.weapon) || null;
+}
+
 export function recalcAttack() {
   const weaponBonus = state.player.weaponBonus || 0;
-  state.player.atk = state.player.baseAtk + weaponBonus;
+  const enchantBonus = state.player.weaponEnchant?.atkBonus || 0;
+  state.player.atk = state.player.baseAtk + weaponBonus + enchantBonus;
 }
 
 export function equipWeapon(weapon) {
   state.player.weapon = weapon.name;
   state.player.weaponBonus = weapon.atk;
   state.player.weaponType = weapon.type;
+  state.player.weaponEnchant = weapon.enchant || null;
   state.player.maxMana = Math.max(6, state.player.maxMana + weapon.mana);
   state.player.mana = Math.min(state.player.mana, state.player.maxMana);
   recalcAttack();
@@ -205,6 +212,136 @@ export function equipWeapon(weapon) {
     state.player.backpack.push(weapon);
     openWeaponDiscard();
   }
+}
+
+const ENCHANT_FALLBACKS = [
+  { name: "Sear",       primitive: "burst", color: "#ff7a3a", status: "burn",  procChance: 0.30 },
+  { name: "Frostbite",  primitive: "burst", color: "#7dd3ff", status: "chill", procChance: 0.30 },
+  { name: "Stormcall",  primitive: "beam",  color: "#c79bff", status: "shock", procChance: 0.30 },
+  { name: "Hunter's Mark", primitive: "aura", color: "#fca5ff", status: "mark",  procChance: 0.45 },
+  { name: "Bloodthirst",   primitive: "burst", color: "#ff5566", status: null,    procChance: 0.40 }
+];
+
+const ENCHANT_TIERS = {
+  minor:     { atkMax: 2, cost: 60,  bonusDmgMax: 1, label: "Minor",     procMax: 0.35,
+               abilityCostMax: 3,  abilityPowerMax: 6,  abilityRangeMax: 6 },
+  major:     { atkMax: 4, cost: 140, bonusDmgMax: 3, label: "Major",     procMax: 0.50,
+               abilityCostMax: 4,  abilityPowerMax: 9,  abilityRangeMax: 8 },
+  legendary: { atkMax: 7, cost: 280, bonusDmgMax: 5, label: "Legendary", procMax: 0.65,
+               abilityCostMax: 6,  abilityPowerMax: 14, abilityRangeMax: 9 }
+};
+
+export function getEnchantTiers() { return ENCHANT_TIERS; }
+
+const ABILITY_TYPES = ["bolt", "aura", "beam", "heal"];
+
+function abilityFallback(tier, primitive, status) {
+  const tierMap = {
+    minor:     { cost: 2, power: 4, range: 5 },
+    major:     { cost: 3, power: 7, range: 6 },
+    legendary: { cost: 4, power: 11, range: 7 }
+  };
+  const t = tierMap[tier];
+  const typeFromPrim = { burst: "aura", beam: "bolt", aura: "heal" };
+  const type = typeFromPrim[primitive] || "bolt";
+  const names = {
+    bolt: ["Spark Volley", "Crimson Lash", "Frost Lance", "Storm Dart"],
+    aura: ["Radiant Burst", "Cinder Pulse", "Glacial Bloom", "Shock Halo"],
+    beam: ["Piercing Ray", "Sun Lance", "Hex Tether", "Wave Cleave"],
+    heal: ["Mending Pulse", "Soul Surge", "Verdant Flow", "Astral Mend"]
+  };
+  return {
+    name: pick(names[type]),
+    type,
+    cost: t.cost,
+    power: t.power,
+    range: type === "heal" ? 0 : t.range
+  };
+}
+
+function clampAbility(raw, tier) {
+  const t = ENCHANT_TIERS[tier];
+  if (!raw || typeof raw !== "object") return abilityFallback(tier, "burst", null);
+  const type = ABILITY_TYPES.includes(raw.type) ? raw.type : "bolt";
+  return {
+    name: typeof raw.name === "string" && raw.name.length < 30 ? raw.name : "Spark Volley",
+    type,
+    cost: Math.max(1, Math.min(t.abilityCostMax, Math.floor(Number(raw.cost) || 2))),
+    power: Math.max(1, Math.min(t.abilityPowerMax, Math.floor(Number(raw.power) || 4))),
+    range: Math.max(0, Math.min(t.abilityRangeMax, Math.floor(Number(raw.range) || 5)))
+  };
+}
+
+function fallbackEnchant(weaponType, tier) {
+  const t = ENCHANT_TIERS[tier];
+  const base = pick(ENCHANT_FALLBACKS);
+  return {
+    name: `${base.name} ${weaponType[0].toUpperCase()}${weaponType.slice(1)}`,
+    flavor: `A ${tier} ${base.name.toLowerCase()} binding hums on the steel.`,
+    atkBonus: rnd(1, t.atkMax),
+    bonusDamage: tier === "minor" ? 0 : rnd(0, t.bonusDmgMax),
+    status: base.status,
+    statusTurns: 4,
+    statusPower: tier === "legendary" ? 3 : tier === "major" ? 2 : 1,
+    procChance: Math.min(t.procMax, base.procChance),
+    color: base.color,
+    primitive: base.primitive,
+    ability: abilityFallback(tier, base.primitive, base.status)
+  };
+}
+
+function clampEnchant(raw, weaponType, tier) {
+  const t = ENCHANT_TIERS[tier];
+  const allowedStatus = ["burn", "chill", "shock", "mark", null];
+  const allowedPrim = ["burst", "beam", "aura"];
+  const status = allowedStatus.includes(raw.status) ? raw.status : null;
+  const primitive = allowedPrim.includes(raw.primitive) ? raw.primitive : "burst";
+  const colorOk = typeof raw.color === "string" && /^#[0-9a-fA-F]{6}$/.test(raw.color);
+  return {
+    name: typeof raw.name === "string" && raw.name.length < 40 ? raw.name : fallbackEnchant(weaponType, tier).name,
+    flavor: typeof raw.flavor === "string" && raw.flavor.length < 140 ? raw.flavor : "",
+    atkBonus: Math.max(0, Math.min(t.atkMax, Math.floor(Number(raw.atkBonus) || 0))),
+    bonusDamage: Math.max(0, Math.min(t.bonusDmgMax, Math.floor(Number(raw.bonusDamage) || 0))),
+    status,
+    statusTurns: Math.max(1, Math.min(8, Math.floor(Number(raw.statusTurns) || 4))),
+    statusPower: Math.max(1, Math.min(4, Math.floor(Number(raw.statusPower) || 1))),
+    procChance: Math.max(0.1, Math.min(t.procMax, Number(raw.procChance) || 0.3)),
+    color: colorOk ? raw.color : "#ffd166",
+    primitive,
+    ability: clampAbility(raw.ability, tier)
+  };
+}
+
+export async function generateAiEnchant({ weaponName, weaponType, tier }) {
+  if (!state.aiEnabled || !getGroqKey()) return fallbackEnchant(weaponType, tier);
+  const t = ENCHANT_TIERS[tier];
+  try {
+    const text = await chatGroq({
+      prompt: `Return JSON only with keys name, flavor, atkBonus, bonusDamage, status, statusTurns, statusPower, procChance, color, primitive, ability. ` +
+              `Design a ${tier} weapon enchant for a fantasy ${weaponType} called "${weaponName}". ` +
+              `name: 2-4 words. flavor: <14 words. atkBonus integer 0-${t.atkMax}. bonusDamage integer 0-${t.bonusDmgMax}. ` +
+              `status one of "burn"|"chill"|"shock"|"mark"|null. statusTurns 2-6. statusPower 1-${tier === "legendary" ? 3 : 2}. ` +
+              `procChance 0.15-${t.procMax}. color "#rrggbb" hex matching the theme. primitive one of "burst"|"beam"|"aura". ` +
+              `ability is an object with keys name, type, cost, power, range. ` +
+              `ability.name 2-4 words evoking an active spell. ability.type one of "bolt"|"aura"|"beam"|"heal" (bolt=single ranged hit, aura=damage adjacent, beam=chain to up to 3, heal=restore HP). ` +
+              `ability.cost integer 1-${t.abilityCostMax} mana. ability.power integer 1-${t.abilityPowerMax}. ability.range integer 0-${t.abilityRangeMax} (use 0 for heal).`,
+      json: true,
+      maxTokens: 400
+    });
+    const raw = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || "{}");
+    return clampEnchant(raw, weaponType, tier);
+  } catch {
+    return fallbackEnchant(weaponType, tier);
+  }
+}
+
+export function applyEnchantToEquippedWeapon(enchant) {
+  const w = findEquippedWeaponObj();
+  if (!w) return false;
+  w.enchant = enchant;
+  state.player.weaponEnchant = enchant;
+  recalcAttack();
+  return true;
 }
 
 export function fallbackLoot(theme = "wild") {
@@ -223,20 +360,13 @@ export function fallbackLoot(theme = "wild") {
 }
 
 export async function generateAiLoot(theme = "enemy") {
-  const apiKey = localStorage.getItem("pixelRogueOpenAIKey");
-  if (!state.aiEnabled || !apiKey) return fallbackLoot(theme);
+  if (!state.aiEnabled || !getGroqKey()) return fallbackLoot(theme);
   try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: "gpt-4.1-mini",
-        input: `Return JSON only with keys name,atk,mana,type,effectiveAgainst,animation,damageMode. Make one fantasy weapon good against ${theme}. atk integer 1-7, mana integer -2..4.`,
-        max_output_tokens: 140
-      })
+    const text = await chatGroq({
+      prompt: `Return JSON only with keys name,atk,mana,type,effectiveAgainst,animation,damageMode. Make one fantasy weapon good against ${theme}. atk integer 1-7, mana integer -2..4.`,
+      json: true,
+      maxTokens: 200
     });
-    if (!response.ok) throw new Error("loot failed");
-    const text = (await response.json()).output_text || "";
     const loot = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || "{}");
     if (!loot.name || typeof loot.atk !== "number") throw new Error("bad loot");
     return loot;

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Pixel Rogue</title>
-  <link rel="stylesheet" href="css/style.css?v=4" />
+  <link rel="stylesheet" href="css/style.css?v=5" />
 </head>
 <body>
   <div class="frame">
@@ -41,6 +41,13 @@
       <div id="discardChoices" class="choice-grid"></div>
     </div>
 
+    <div id="applyOverlay" class="overlay hidden">
+      <h2 id="applyTitle">APPLY SIGIL</h2>
+      <p id="applyMessage"></p>
+      <div id="applyChoices" class="choice-grid"></div>
+      <button class="choice" id="applyCancel">Cancel</button>
+    </div>
+
     <div id="chestOverlay" class="overlay hidden">
       <h2>CHEST CONTENTS</h2>
       <div id="chestLoot" class="inventory"></div>
@@ -67,7 +74,7 @@
         <p><b style="color:var(--amber)">Goal —</b> descend 15 floors. Kill the boss on floors 5, 10, and 15 to share your run.</p>
         <p><b style="color:var(--amber)">Move —</b> <kbd>WASD</kbd> / <kbd>←↑→↓</kbd>. Bump enemies to attack. <kbd>Space</kbd> = wait.</p>
         <p><b style="color:var(--amber)">Cast —</b> <kbd>Z</kbd> <kbd>X</kbd> <kbd>C</kbd> <kbd>V</kbd> fire the spell in that slot. Aim spells let you click a tile. Hold <kbd>Shift</kbd> = charged (1.5× damage / cost).</p>
-        <p><b style="color:var(--amber)">Other —</b> <kbd>F</kbd> = bow shot (if equipped). <kbd>B</kbd> = backpack / re-slot spells. <kbd>1</kbd>–<kbd>6</kbd> = use a relic. <kbd>N</kbd> = toggle AI narration. <kbd>Esc</kbd> = cancel aim / close menus.</p>
+        <p><b style="color:var(--amber)">Other —</b> <kbd>F</kbd> = bow shot (if equipped). <kbd>J</kbd> = weapon enchant ability (after enchanting). <kbd>B</kbd> = backpack / re-slot spells. <kbd>1</kbd>–<kbd>6</kbd> = use a relic. <kbd>N</kbd> = toggle AI enchants (Groq). <kbd>Esc</kbd> = cancel aim / close menus.</p>
         <p><b style="color:var(--amber)">Mobile —</b> D-pad + action buttons below the canvas. Aim spells → tap the map tile to fire.</p>
       </div>
       <button class="choice" id="closeTutorial">got it</button>
@@ -92,7 +99,7 @@
     </div>
     <div id="inventory" class="inventory"></div>
     <div id="spells" class="inventory"></div>
-    <div id="narration" class="inventory">Narration: local combat hype mode.</div>
+    <div id="narration" class="inventory">Aim hints will appear here.</div>
     <div class="log" id="log"></div>
     <div class="hint">
       <span>move <kbd>WASD</kbd></span>
@@ -121,6 +128,6 @@
     </div>
   </div>
 
-  <script type="module" src="js/main.js"></script>
+  <script type="module" src="js/main.js?v=11"></script>
 </body>
 </html>

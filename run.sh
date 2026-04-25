@@ -1,2 +1,2 @@
 #!/bin/bash
-python3 -m http.server 8090
+python3 "$(dirname "$0")/serve.py"

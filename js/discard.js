@@ -35,6 +35,7 @@ export function openWeaponDiscard() {
         state.player.weapon = next.name;
         state.player.weaponBonus = next.atk;
         state.player.weaponType = next.type;
+        state.player.weaponEnchant = next.enchant || null;
       }
     });
     return btn;

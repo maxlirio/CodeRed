@@ -12,12 +12,39 @@ function sectionHeader(text, marginTop = "") {
   return h;
 }
 
+function describeAbility(a) {
+  const where = a.type === "heal" ? "self" : `nearest in ${a.range || 5}`;
+  const verb = a.type === "heal" ? `heal ${a.power}` :
+               a.type === "aura" ? `${a.power} dmg adjacent` :
+               a.type === "beam" ? `chain ${a.power} dmg, up to 3 foes` :
+               `${a.power} dmg, ${where}`;
+  return `${verb} · ${a.cost}MP`;
+}
+
+function describeProc(e) {
+  const parts = [];
+  if (e.bonusDamage) parts.push(`+${e.bonusDamage} on-hit`);
+  if (e.status) parts.push(`${Math.round(e.procChance * 100)}% ${e.status} ${e.statusTurns}t`);
+  else if (!e.bonusDamage) parts.push(`${Math.round(e.procChance * 100)}% proc`);
+  return parts.join(" · ");
+}
+
 function renderWeapons() {
   const items = state.player.backpack.length ? state.player.backpack : [fallbackLoot("starter")];
   for (const item of items) {
     const btn = document.createElement("button");
     btn.className = "choice";
-    btn.innerHTML = `<strong>${item.name}</strong><span>${item.type} · ATK +${item.atk} · Mana ${item.mana} · Good vs ${item.effectiveAgainst || "any"}</span>`;
+    const e = item.enchant;
+    const totalAtk = (item.atk || 0) + (e?.atkBonus || 0);
+    let html = `<strong>${item.name}${e ? ` <span style="color:${e.color}">✦ ${e.name}</span>` : ""}</strong>`;
+    html += `<span>${item.type} · ATK +${totalAtk}${e?.atkBonus ? ` (${item.atk}+${e.atkBonus})` : ""} · Mana ${item.mana} · Good vs ${item.effectiveAgainst || "any"}</span>`;
+    if (e) {
+      if (e.flavor) html += `<span style="font-style:italic;color:var(--ink-dim)">${e.flavor}</span>`;
+      const proc = describeProc(e);
+      if (proc) html += `<span>On hit: ${proc}</span>`;
+      if (e.ability) html += `<span style="color:${e.color}">[J] ${e.ability.name} — ${describeAbility(e.ability)}</span>`;
+    }
+    btn.innerHTML = html;
     btn.addEventListener("click", () => {
       equipWeapon(item);
       ui.backpackOverlay.classList.add("hidden");

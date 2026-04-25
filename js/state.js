@@ -29,7 +29,12 @@ export const ui = {
   closeChest: document.getElementById("closeChest"),
   discardOverlay: document.getElementById("discardOverlay"),
   discardMessage: document.getElementById("discardMessage"),
-  discardChoices: document.getElementById("discardChoices")
+  discardChoices: document.getElementById("discardChoices"),
+  applyOverlay: document.getElementById("applyOverlay"),
+  applyTitle: document.getElementById("applyTitle"),
+  applyMessage: document.getElementById("applyMessage"),
+  applyChoices: document.getElementById("applyChoices"),
+  applyCancel: document.getElementById("applyCancel")
 };
 
 function makeRunNameParts() {
@@ -90,7 +95,9 @@ export const state = {
     lastOffensive: null,
     knownSpells: new Set(["bolt", "nova", "mend"]),
     spellRanks: { bolt: 1, nova: 1, mend: 1 },
-    spellSlots: { z: "bolt", x: "nova", c: "mend", v: null }
+    spellSlots: { z: "bolt", x: "nova", c: "mend", v: null },
+    spellAugments: {},
+    weaponEnchant: null
   },
   stats: {
     kills: 0,
@@ -105,6 +112,10 @@ export const state = {
   runSeedWords: makeRunNameParts(),
   bossAlive: false,
   awaitingShop: false,
+  applyOpen: false,
+  castingPiercing: false,
+  castingDamage: 0,
+  castingDepth: 0,
   message: "Choose your class.",
   over: false,
   won: false,

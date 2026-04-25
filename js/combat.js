@@ -5,7 +5,102 @@ import {
   spawnBurst, spawnBeam, doScreenShake,
   hasStatus, applyStatus, removeStatus, addFloorEffect
 } from "./fx.js";
-import { narrateCombat } from "./ai.js";
+
+export function useWeaponAbility() {
+  const enchant = state.player.weaponEnchant;
+  if (!enchant || !enchant.ability) {
+    setMessage("Your weapon has no enchant ability. Visit the Enchanter.");
+    return false;
+  }
+  const a = enchant.ability;
+  if (state.player.mana < a.cost) {
+    setMessage(`Not enough mana for ${a.name} (${a.cost} MP).`);
+    return false;
+  }
+  const color = enchant.color || "#ffd166";
+
+  if (a.type === "heal") {
+    const before = state.player.hp;
+    state.player.hp = Math.min(state.player.maxHp, state.player.hp + a.power);
+    spawnBurst(state.player.x, state.player.y, color, 14);
+    state.player.mana -= a.cost;
+    setMessage(`${a.name} restores ${state.player.hp - before} HP.`);
+    return true;
+  }
+
+  const range = a.range || 5;
+  const inRange = state.enemies
+    .map((e) => ({ e, d: distance(e, state.player) }))
+    .filter(({ d }) => d <= range)
+    .sort((x, y) => x.d - y.d);
+
+  if (a.type === "aura") {
+    const adjacent = state.enemies.filter((e) => distance(e, state.player) <= 1);
+    if (!adjacent.length) { setMessage(`${a.name}: nothing adjacent.`); return false; }
+    spawnBurst(state.player.x, state.player.y, color, 16);
+    for (const e of adjacent) {
+      spawnBurst(e.x, e.y, color, 10);
+      damageEnemy(e, a.power, "arcane");
+      if (enchant.status) applyStatus(e, enchant.status, enchant.statusTurns || 3, enchant.statusPower || 1);
+    }
+    state.player.mana -= a.cost;
+    setMessage(`${a.name} bursts across ${adjacent.length} foe${adjacent.length > 1 ? "s" : ""}.`);
+    clearDeadEnemies();
+    return true;
+  }
+
+  if (!inRange.length) { setMessage(`${a.name}: no target within ${range} tiles.`); return false; }
+
+  if (a.type === "bolt") {
+    const target = inRange[0].e;
+    spawnBeam(state.player.x, state.player.y, target.x, target.y, color);
+    spawnBurst(target.x, target.y, color, 10);
+    damageEnemy(target, a.power, "arcane");
+    if (enchant.status) applyStatus(target, enchant.status, enchant.statusTurns || 4, enchant.statusPower || 1);
+    state.player.mana -= a.cost;
+    setMessage(`${a.name} strikes ${target.name}.`);
+    clearDeadEnemies();
+    return true;
+  }
+
+  if (a.type === "beam") {
+    const chain = inRange.slice(0, 3);
+    let prev = state.player;
+    for (const { e } of chain) {
+      spawnBeam(prev.x, prev.y, e.x, e.y, color);
+      spawnBurst(e.x, e.y, color, 8);
+      damageEnemy(e, Math.max(1, Math.floor(a.power * 0.7)), "arcane");
+      if (enchant.status) applyStatus(e, enchant.status, enchant.statusTurns || 3, enchant.statusPower || 1);
+      prev = e;
+    }
+    state.player.mana -= a.cost;
+    setMessage(`${a.name} chains through ${chain.length} foe${chain.length > 1 ? "s" : ""}.`);
+    clearDeadEnemies();
+    return true;
+  }
+
+  return false;
+}
+
+export function triggerWeaponEnchant(enemy) {
+  const enchant = state.player.weaponEnchant;
+  if (!enchant) return;
+  if (Math.random() > (enchant.procChance || 0.25)) return;
+  const color = enchant.color || "#ffd166";
+  const primitive = enchant.primitive || "burst";
+  if (primitive === "beam") spawnBeam(state.player.x, state.player.y, enemy.x, enemy.y, color);
+  else if (primitive === "aura") {
+    spawnBurst(state.player.x, state.player.y, color, 8);
+    spawnBurst(enemy.x, enemy.y, color, 10);
+  }
+  else spawnBurst(enemy.x, enemy.y, color, 14);
+  if (enchant.status) {
+    applyStatus(enemy, enchant.status, enchant.statusTurns || 4, enchant.statusPower || 1);
+  }
+  if (enchant.bonusDamage) {
+    enemy.hp -= enchant.bonusDamage;
+  }
+}
 
 export function rollHit(baseDamage) {
   const r = Math.random();
@@ -38,6 +133,7 @@ export function damageEnemy(enemy, amount, school) {
   if (dealt > 0 && hasStatus(enemy, "mark")) {
     state.player.mana = Math.min(state.player.maxMana, state.player.mana + 1);
   }
+  if (state.castingDepth > 0) state.castingDamage = (state.castingDamage || 0) + dealt;
   if (shatter) setMessage(`SHATTER! ${enemy.name} takes ${dealt} ${school}.`);
   return dealt;
 }
@@ -66,7 +162,6 @@ export function clearDeadEnemies() {
     state.bossAlive = false;
     state.player.spellPoints += 2;
     setMessage("The boss falls. +2 Spell Points. Return to town or press on.");
-    narrateCombat("The floor boss crashes down and the crowd gasps in awe.");
   }
 }
 
@@ -87,6 +182,7 @@ export function playerAttack(enemy) {
   spawnBurst(enemy.x, enemy.y, "#ff758f", 9);
   if (rolled.type === "miss") setMessage("You miss!");
   if (rolled.type === "crit") setMessage(`Critical hit! ${dmg} damage.`);
+  if (rolled.type !== "miss") triggerWeaponEnchant(enemy);
   if (enemy.hp <= 0) {
     const gold = enemy.boss ? rnd(18, 30) : rnd(3, 8);
     state.player.gold += gold;
@@ -96,7 +192,6 @@ export function playerAttack(enemy) {
       state.stats.bossKills += 1;
       state.player.spellPoints += 2;
       setMessage(`You slay ${enemy.name}, floor boss! +2 Spell Points.`);
-      narrateCombat(`Boss ${enemy.name} collapses after a brutal strike.`);
       state.bossAlive = false;
       enemy.rewardsGranted = true;
       enemy.dying = 18;
@@ -105,10 +200,8 @@ export function playerAttack(enemy) {
     enemy.rewardsGranted = true;
     enemy.dying = 18;
     setMessage(`You defeat a ${enemy.type}.`);
-    narrateCombat(`You dropped a ${enemy.type} with a clean finishing blow.`);
   } else {
     if (rolled.type !== "miss") setMessage(`You hit ${enemy.name} for ${dmg}.`);
-    narrateCombat(`You carve into ${enemy.name} for ${dmg} damage.`);
   }
 }
 
@@ -128,7 +221,6 @@ export function rangedAttackAt(tx, ty) {
       enemy.hp -= dmg;
       spawnBeam(state.player.x, state.player.y, tile.x, tile.y, "#ffd166");
       setMessage(`Arrow hits ${enemy.name} for ${dmg}.`);
-      narrateCombat(`Your arrow whistles through the dark and strikes ${enemy.name}.`);
       clearDeadEnemies();
       return true;
     }
@@ -149,7 +241,6 @@ export function damageNearestEnemy(amount, color) {
   target.hp -= amount;
   spawnBeam(state.player.x, state.player.y, target.x, target.y, color);
   setMessage(`${target.name} takes ${amount} magic damage.`);
-  narrateCombat(`A spell slams ${target.name} for ${amount} crackling damage.`);
   clearDeadEnemies();
   return true;
 }
@@ -165,7 +256,6 @@ export function damageAdjacentEnemies(amount, color) {
     spawnBurst(enemy.x, enemy.y, color, 8);
   }
   setMessage(`Nova hits ${nearby.length} foes.`);
-  narrateCombat(`Your nova explodes across ${nearby.length} nearby enemies.`);
   clearDeadEnemies();
   return true;
 }

@@ -24,9 +24,11 @@ function rankOf() {
 function projectedPath(mx, my) {
   const line = lineTiles(state.player.x, state.player.y, mx, my).slice(1);
   const pierces = rankOf() >= 2;
+  const phase = state.castingPiercing || ((state.player.spellAugments?.bolt) || []).includes("phase");
   const path = [];
   for (const t of line) {
-    if (!inBounds(t.x, t.y) || state.map[t.y][t.x] === 1 || isWallBlocked(t.x, t.y)) break;
+    if (!inBounds(t.x, t.y)) break;
+    if (!phase && (state.map[t.y][t.x] === 1 || isWallBlocked(t.x, t.y))) break;
     path.push(t);
     const e = enemyAt(t.x, t.y);
     if (e && !pierces) break;
@@ -76,10 +78,12 @@ export function effect(ctx) {
   const { tx, ty, rank, baseDmg, isCrit, spell } = ctx;
   const line = lineTiles(state.player.x, state.player.y, tx, ty).slice(1);
   const pierces = rank >= 2;
+  const phase = state.castingPiercing;
   let hit = false;
   let prev = state.player;
   for (const tile of line) {
-    if (!inBounds(tile.x, tile.y) || state.map[tile.y][tile.x] === 1 || isWallBlocked(tile.x, tile.y)) break;
+    if (!inBounds(tile.x, tile.y)) break;
+    if (!phase && (state.map[tile.y][tile.x] === 1 || isWallBlocked(tile.x, tile.y))) break;
     const enemy = enemyAt(tile.x, tile.y);
     spawnBeam(prev.x, prev.y, tile.x, tile.y, SCHOOL_COLORS.storm);
     if (enemy) {

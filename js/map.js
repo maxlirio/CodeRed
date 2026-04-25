@@ -3,6 +3,7 @@ import { state } from "./state.js";
 import { key } from "./utils.js";
 import { srnd as rnd, spick as pick, srand } from "./rng.js";
 import { makeRelic } from "./items.js";
+import { makeMagicScroll } from "./augments.js";
 import { SPELL_LIBRARY, rankOf, isSpellForPlayer } from "./spells/index.js";
 import { makeBossName } from "./boss.js";
 
@@ -131,9 +132,9 @@ function placeChest(occupied) {
 function rollChestLoot() {
   const loot = { gold: 15 + Math.floor(srand() * 20) + state.floor * 2 };
   const r = srand();
-  if (r < 0.35) loot.potion = true;
-  else if (r < 0.60) loot.relic = makeRelic(state.floor);
-  else if (r < 0.82) {
+  if (r < 0.30) loot.potion = true;
+  else if (r < 0.52) loot.relic = makeRelic(state.floor);
+  else if (r < 0.72) {
     const atCap = state.player.knownSpells.size >= 6;
     const eligible = SPELL_LIBRARY.filter(isSpellForPlayer);
     const unknown = atCap ? [] : eligible.filter((s) => !state.player.knownSpells.has(s.id));
@@ -141,8 +142,9 @@ function rollChestLoot() {
     const pool = unknown.length ? unknown : rankable;
     if (pool.length) loot.spell = pick(pool);
   }
-  else if (r < 0.87) loot.weapon = pick(WEAPON_POOL);
-  else if (r < 0.97) loot.spellPoints = 1 + Math.floor(state.floor / 5);
+  else if (r < 0.85) loot.scroll = makeMagicScroll();
+  else if (r < 0.90) loot.weapon = pick(WEAPON_POOL);
+  else if (r < 0.99) loot.spellPoints = 1 + Math.floor(state.floor / 5);
   return loot;
 }
 
@@ -196,11 +198,12 @@ export function buildTown() {
 
   placeBuilding("Blacksmith", 2,  2, 4, 4, 1, 3, "weapon");
   placeBuilding("Alchemist", 22, 2, 4, 4, 1, 3, "alchemist");
+  placeBuilding("Enchanter", 12, 2, 4, 4, 1, 3, "enchanter");
   placeBuilding("Arcanum",    2, 13, 4, 4, 1, 0, "arcanum");
   placeBuilding("Curios",    22, 13, 4, 4, 1, 0, "curio");
   placeBuilding("Dungeon Entrance", 12, 13, 4, 4, 1, 0, null);
 
-  placeFountain(13, 7);
+  placeFountain(7, 7);
 
   placeTree(7,  2); placeTree(20, 2);
   placeTree(7, 10); placeTree(20, 10);
@@ -212,6 +215,7 @@ export function buildTown() {
   // Door stubs
   placePath(3, 6); placePath(3, 7); placePath(3, 8); placePath(3, 9);
   placePath(23, 6); placePath(23, 7); placePath(23, 8); placePath(23, 9);
+  placePath(13, 6); placePath(13, 7); placePath(13, 8); placePath(13, 9);
   placePath(3, 11); placePath(3, 12);
   placePath(23, 11); placePath(23, 12);
 

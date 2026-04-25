@@ -6,7 +6,6 @@ import { playerAttack } from "./combat.js";
 import { rankOf } from "./spells/index.js";
 import { equipWeapon, recalcAttack, generateAiLoot } from "./items.js";
 import { openSpellDiscard } from "./discard.js";
-import { narrateCombat } from "./ai.js";
 import { buildFloor, buildTown } from "./map.js";
 import { openShop } from "./shop.js";
 import { SCHOOL_COLORS } from "./config.js";
@@ -74,6 +73,14 @@ function openChest(chest) {
       lines.push(`<span style="color:#fca5ff"><strong>Relic: ${loot.relic.name}</strong> — ${loot.relic.desc}</span>`);
     } else {
       lines.push(`<span style="color:#b8b5e9">Relic left behind (inventory full).</span>`);
+    }
+  }
+  if (loot.scroll) {
+    if (state.player.inventory.length < 6) {
+      state.player.inventory.push(loot.scroll);
+      lines.push(`<span style="color:#84f6a6"><strong>${loot.scroll.name}</strong> — ${loot.scroll.desc}</span>`);
+    } else {
+      lines.push(`<span style="color:#b8b5e9">Scroll left behind (inventory full).</span>`);
     }
   }
   if (loot.spell) {
@@ -158,14 +165,27 @@ function enterFloor(floor, { fromAbove }) {
   }
 }
 
+function maybeMarkCurrentFloorCleared() {
+  if (state.floor <= 0) return;
+  const aliveEnemies = state.enemies.some((e) => e.hp > 0);
+  if (aliveEnemies || state.bossAlive) return;
+  const hadBoss = state.floor % 5 === 0;
+  const prior = state.stats.floorLog[state.floor - 1];
+  if (prior !== "boss") {
+    state.stats.floorLog[state.floor - 1] = hadBoss ? "boss" : "cleared";
+  }
+  state.stats.floorsCleared = Math.max(state.stats.floorsCleared, state.floor);
+}
+
 export function enterTown() {
-  if (state.started) snapshotFloor();
+  if (state.started) { maybeMarkCurrentFloorCleared(); snapshotFloor(); }
   enterFloor(0, { fromAbove: false });
   setMessage("You return to town. The air is peaceful here.");
 }
 
 export function returnToTown() {
   if (state.floor === 0 || !state.started || state.over) return;
+  maybeMarkCurrentFloorCleared();
   snapshotFloor();
   enterFloor(0, { fromAbove: false });
   setMessage("A recall rune whisks you back to town.");
@@ -207,9 +227,77 @@ function ascend() {
   setMessage(prev === 0 ? "You climb back up to town." : `You ascend to floor ${prev}.`);
 }
 
+function eligibleFloors() {
+  const cleared = [];
+  for (let f = 1; f <= maxFloor; f++) {
+    const log = state.stats.floorLog[f - 1];
+    if (log === "cleared" || log === "boss") cleared.push(f);
+  }
+  const maxCleared = cleared.length ? Math.max(...cleared) : 0;
+  const next = maxCleared + 1;
+  const out = [...cleared];
+  if (next <= maxFloor && !cleared.includes(next)) out.push(next);
+  return { list: out, clearedSet: new Set(cleared) };
+}
+
+function travelToFloor(target) {
+  if (state.floor !== 0) return;
+  if (target < 1 || target > maxFloor) return;
+  const firstVisit = !state.floorCache[target];
+  if (firstVisit) {
+    state.player.baseAtk += 1;
+    state.player.maxHp += 2;
+    state.player.maxMana = levelManaPool(target);
+    recalcAttack();
+    state.player.mana = state.player.maxMana;
+    state.player.hp = Math.min(state.player.maxHp, state.player.hp + 5);
+    state.player.spellPoints += 1;
+  }
+  enterFloor(target, { fromAbove: true });
+  setMessage(firstVisit ? `You descend to floor ${target}.` : `You return to floor ${target}.`);
+}
+
+function closeFloorSelector() {
+  ui.applyOverlay.classList.add("hidden");
+  state.applyOpen = false;
+}
+
+function openFloorSelector() {
+  const { list, clearedSet } = eligibleFloors();
+  ui.applyTitle.textContent = "DESCEND";
+  ui.applyMessage.textContent = list.length <= 1
+    ? "Step into the dungeon. The descent begins."
+    : "Where to? Cleared floors are open for fast return.";
+  ui.applyChoices.innerHTML = "";
+  for (const n of list) {
+    const btn = document.createElement("button");
+    btn.className = "choice";
+    const isCleared = clearedSet.has(n);
+    const cached = !!state.floorCache[n];
+    const isBoss = n % 5 === 0;
+    const tag = isCleared ? "Return · cleared"
+              : cached ? "Resume · in progress"
+              : "Begin descent · fresh ground";
+    btn.innerHTML =
+      `<strong>Floor ${n}${isBoss ? " — Boss" : ""}</strong>` +
+      `<span>${tag}</span>`;
+    btn.addEventListener("click", () => {
+      closeFloorSelector();
+      travelToFloor(n);
+    });
+    ui.applyChoices.appendChild(btn);
+  }
+  ui.applyCancel.onclick = () => {
+    closeFloorSelector();
+    setMessage("You step away from the dungeon entrance.");
+  };
+  ui.applyOverlay.classList.remove("hidden");
+  state.applyOpen = true;
+}
+
 function enterInteractable(i) {
   if (i.kind === "shop") { state.awaitingShop = true; openShop(i.shop); return; }
-  if (i.kind === "dungeon") { descend(); return; }
+  if (i.kind === "dungeon") { openFloorSelector(); return; }
 }
 
 export function tryMove(dx, dy) {
@@ -241,8 +329,8 @@ export function useRelic(index) {
   if (state.awaitingShop) return;
   const relic = state.player.inventory[index];
   if (!relic) return;
-  relic.use();
-  state.player.inventory.splice(index, 1);
+  relic.use(index);
+  if (relic.consumeOnUse !== false) state.player.inventory.splice(index, 1);
 }
 
 export function chooseClass(c, opts = {}) {
@@ -258,6 +346,8 @@ export function chooseClass(c, opts = {}) {
   state.stats = { kills: 0, bossKills: 0, spellsCast: 0, goldEarned: 0, floorsCleared: 0, floorLog: [] };
   state.player.gold = 0;
   state.player.inventory = [];
+  state.player.spellAugments = {};
+  state.player.weaponEnchant = null;
   const starts = c.startSpells || ["bolt", "nova", "mend"];
   state.player.knownSpells = new Set(starts);
   state.player.spellRanks = Object.fromEntries(starts.map((id) => [id, 1]));

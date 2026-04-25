@@ -2,7 +2,7 @@ import { state, ui, canvas } from "./state.js";
 import { tileSize } from "./config.js";
 import { setMessage, inBounds } from "./utils.js";
 import { SPELL_BY_ID, castSpell, spendSpellMana } from "./spells/index.js";
-import { rangedAttackAt } from "./combat.js";
+import { rangedAttackAt, useWeaponAbility } from "./combat.js";
 import { tryMove, useRelic, returnToTown } from "./turn.js";
 import { renderBackpack } from "./backpack.js";
 import { closeShop } from "./shop.js";
@@ -17,7 +17,7 @@ const MOVE_KEYS = {
 const HOTKEYS = new Set([
   "arrowup", "arrowdown", "arrowleft", "arrowright",
   "w", "a", "s", "d", " ",
-  "z", "x", "c", "v", "q", "e", "f", "n", "b", "?",
+  "z", "x", "c", "v", "q", "e", "f", "j", "n", "b", "?",
   "1", "2", "3", "4", "5", "6", "escape"
 ]);
 
@@ -59,11 +59,11 @@ function toggleBackpack() {
 
 function toggleAi() {
   state.aiEnabled = !state.aiEnabled;
-  if (state.aiEnabled && !localStorage.getItem("pixelRogueOpenAIKey")) {
-    const keyInput = prompt("Enter OpenAI API key for narration (saved in localStorage):");
-    if (keyInput) localStorage.setItem("pixelRogueOpenAIKey", keyInput.trim());
+  if (state.aiEnabled && !localStorage.getItem("pixelRogueGroqKey")) {
+    const keyInput = prompt("Enter Groq API key (free at console.groq.com — saved in localStorage). Used by the Enchanter to generate weapon enchants:");
+    if (keyInput) localStorage.setItem("pixelRogueGroqKey", keyInput.trim());
   }
-  setMessage(`AI narration ${state.aiEnabled ? "enabled" : "disabled"}.`);
+  setMessage(`AI enchants ${state.aiEnabled ? "enabled" : "disabled"}.`);
 }
 
 function toggleTutorial(force) {
@@ -105,6 +105,8 @@ function onKeyDown(e) {
       setMessage("Equip a bow to fire arrows.");
     }
   }
+
+  if (k === "j") useWeaponAbility();
 
   if (k === "n") toggleAi();
 
