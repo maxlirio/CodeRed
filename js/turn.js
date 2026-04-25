@@ -342,7 +342,11 @@ export function exitShopInterior() {
 }
 
 function enterInteractable(i) {
-  if (i.kind === "shop") { enterShopInterior(i.shop); return; }
+  if (i.kind === "shop") {
+    if (i.shop === "enchanter") { state.awaitingShop = true; openShop("enchanter"); }
+    else enterShopInterior(i.shop);
+    return;
+  }
   if (i.kind === "vendor") { state.awaitingShop = true; openShop(i.shop); return; }
   if (i.kind === "shop_exit") { exitShopInterior(); return; }
   if (i.kind === "dungeon") { openFloorSelector(); return; }
@@ -358,7 +362,11 @@ export function tryMove(dx, dy) {
   if (!isWalkable(nx, ny)) {
     if (state.floor === 0 && !state.shopInterior) {
       const shopKind = shopAt(nx, ny);
-      if (shopKind) { enterShopInterior(shopKind); return; }
+      if (shopKind) {
+        if (shopKind === "enchanter") { state.awaitingShop = true; openShop("enchanter"); }
+        else enterShopInterior(shopKind);
+        return;
+      }
       if (dungeonEntranceAt(nx, ny)) { openFloorSelector(); return; }
     }
     setMessage("You bump into rough stone.");

@@ -159,8 +159,8 @@ export function renderClassChoices() {
     const starts = (c.startSpells || [])
       .map((id) => SPELL_BY_ID[id])
       .filter(Boolean)
-      .map((s) => `<span style="color:${SCHOOL_COLORS[s.school]}">${s.name}</span>`)
-      .join(" · ");
+      .map((s) => `<li style="color:${SCHOOL_COLORS[s.school]}">${s.name}</li>`)
+      .join("");
     const desc = c.desc ? `<span class="class-flavor">${c.desc}</span>` : "";
     btn.innerHTML = `
       <strong>${c.name}</strong>
@@ -172,7 +172,7 @@ export function renderClassChoices() {
         <span class="chip"><b>SP</b>${c.spellPower}</span>
       </span>
       <span class="class-weapon">${c.weapon}</span>
-      ${starts ? `<span class="class-spells">${starts}</span>` : ""}
+      ${starts ? `<div class="class-spells-label">Starting spells</div><ul class="class-spells">${starts}</ul>` : ""}
     `;
     btn.addEventListener("click", () => {
       const heroName = heroNameInput.value.trim() || suggestName();

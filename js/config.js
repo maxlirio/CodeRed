@@ -611,6 +611,263 @@ export const EXIT_DOOR_SPRITE = [
   ["#ffd166", 16, 12, 2, 2]
 ];
 
+// Town decorative props
+export const LANTERN_SPRITE = [
+  ["#3a2a1a", 11, 0, 2, 8],   // post
+  ["#1a0a08", 8, 8, 8, 2],    // bracket
+  ["#5c3a1a", 8, 10, 8, 4],   // lamp body
+  ["#1a0a08", 7, 10, 1, 4], ["#1a0a08", 16, 10, 1, 4], // lamp frame
+  ["#ffd166", 9, 11, 6, 2],   // glass
+  ["#fff4c0", 10, 11, 4, 1],  // light glow
+  ["#1a0a08", 11, 14, 2, 1]   // lamp base
+];
+
+export const SIGNPOST_SPRITE = [
+  ["#5c3a1a", 11, 8, 2, 14],   // post
+  ["#3a2a1a", 6, 4, 14, 6],    // sign board
+  ["#7a4a2a", 7, 5, 12, 4],    // wood face
+  ["#3a2a1a", 7, 5, 12, 1],    // top edge
+  ["#1a0a08", 6, 9, 14, 1],    // bottom shadow
+  ["#1a0a08", 11, 22, 2, 1]    // post base
+];
+
+export const BARREL_SPRITE = [
+  ["#5c3a1a", 6, 6, 12, 16],   // body
+  ["#3a2a1a", 6, 6, 12, 1],    // top edge
+  ["#3a2a1a", 6, 21, 12, 1],   // bottom edge
+  ["#3a2a1a", 6, 11, 12, 1],   // band
+  ["#3a2a1a", 6, 16, 12, 1],   // band
+  ["#7a4a2a", 7, 7, 10, 3],    // top inset
+  ["#3a2a1a", 8, 8, 8, 1]      // top dark line
+];
+
+export const CRATE_SPRITE = [
+  ["#7a4a2a", 5, 8, 14, 14],   // body
+  ["#3a2a1a", 5, 8, 14, 1],    // top
+  ["#3a2a1a", 5, 21, 14, 1],   // bottom
+  ["#3a2a1a", 5, 8, 1, 14], ["#3a2a1a", 18, 8, 1, 14], // sides
+  ["#3a2a1a", 5, 14, 14, 1],   // mid band
+  ["#3a2a1a", 11, 8, 1, 14]    // vertical
+];
+
+export const FLOWER_PATCH_SPRITE = [
+  ["#3a5e2a", 4, 16, 16, 5],   // soil/grass mound
+  ["#a8323e", 6, 13, 2, 2],   // flower 1
+  ["#ff7a3a", 10, 12, 2, 2],  // flower 2
+  ["#fca5ff", 14, 13, 2, 2],  // flower 3
+  ["#ffd166", 17, 14, 2, 2],  // flower 4
+  ["#84f6a6", 7, 15, 1, 2], ["#84f6a6", 11, 14, 1, 2],
+  ["#84f6a6", 15, 15, 1, 2], ["#84f6a6", 18, 16, 1, 2]  // stems
+];
+
+// Shop interior decorations
+export const ANVIL_SPRITE = [
+  ["#3a3a44", 4, 14, 16, 6],   // base
+  ["#1a1a22", 4, 14, 16, 1],
+  ["#5a5a64", 6, 10, 12, 4],   // body
+  ["#3a3a44", 6, 10, 12, 1],
+  ["#5a5a64", 2, 11, 4, 3],    // horn left
+  ["#5a5a64", 18, 11, 4, 3],   // horn right
+  ["#1a1a22", 4, 20, 16, 2]    // ground shadow
+];
+
+export const ARMOR_STAND_SPRITE = [
+  ["#3a2a1a", 11, 20, 2, 4],   // post base
+  ["#5c3a1a", 11, 8, 2, 12],   // post
+  ["#7a4a2a", 9, 22, 6, 2],    // foot
+  ["#5a5a64", 6, 10, 12, 8],   // chestplate
+  ["#3a3a44", 6, 10, 12, 1], ["#3a3a44", 6, 17, 12, 1],
+  ["#7a7a86", 7, 11, 10, 5],
+  ["#ffd166", 11, 12, 2, 3],   // emblem
+  ["#5a5a64", 4, 11, 2, 6], ["#5a5a64", 18, 11, 2, 6]  // pauldrons
+];
+
+export const WALL_SWORD_SPRITE = [
+  ["#7a4a2a", 9, 0, 6, 1],     // wall mount
+  ["#c0c0c8", 11, 1, 2, 14],   // blade
+  ["#e8e8ec", 11, 1, 1, 14],
+  ["#5c3a1a", 9, 14, 6, 2],    // crossguard
+  ["#3a2a1a", 11, 16, 2, 4],   // grip
+  ["#ffd166", 11, 20, 2, 1]    // pommel
+];
+
+export const WALL_SHIELD_SPRITE = [
+  ["#7a4a2a", 9, 0, 6, 1],     // wall mount
+  ["#a8323e", 7, 2, 10, 12],   // shield body
+  ["#5c1a20", 7, 2, 10, 1],
+  ["#5c1a20", 7, 13, 10, 1],
+  ["#5c1a20", 7, 2, 1, 12], ["#5c1a20", 16, 2, 1, 12],
+  ["#ffd166", 11, 6, 2, 4]     // emblem
+];
+
+export const FORGE_SPRITE = [
+  ["#1a1a22", 2, 4, 20, 18],   // hood
+  ["#3a3a44", 2, 4, 20, 2],    // hood top
+  ["#1a1a1a", 4, 14, 16, 8],   // forge mouth
+  ["#ff7a3a", 6, 16, 12, 5],   // fire glow
+  ["#ffd166", 8, 18, 8, 3],    // fire core
+  ["#fff4c0", 10, 19, 4, 1],   // fire highlight
+  ["#5c3a1a", 2, 20, 20, 2]    // base bricks
+];
+
+export const CAULDRON_SPRITE = [
+  ["#1a1a22", 4, 18, 16, 4],   // base
+  ["#3a3a44", 3, 12, 18, 8],   // body
+  ["#1a1a22", 3, 12, 18, 2],   // rim
+  ["#5a5a64", 4, 13, 16, 1],   // rim highlight
+  ["#84f6a6", 5, 14, 14, 4],   // bubbling potion
+  ["#cefcdb", 7, 15, 4, 2], ["#cefcdb", 13, 15, 3, 2],  // bubbles
+  ["#ff7a3a", 5, 21, 4, 1], ["#ff7a3a", 15, 21, 4, 1]   // small flames under
+];
+
+export const VIAL_SHELF_SPRITE = [
+  ["#5c3a1a", 2, 4, 20, 2],    // top shelf
+  ["#5c3a1a", 2, 12, 20, 2],   // mid shelf
+  ["#5c3a1a", 2, 20, 20, 2],   // bottom shelf
+  ["#3a2a1a", 2, 4, 1, 18], ["#3a2a1a", 21, 4, 1, 18],  // sides
+  // Top row vials
+  ["#7bdff2", 4, 7, 3, 5], ["#a8f3ff", 4, 8, 3, 1],
+  ["#fca5ff", 9, 7, 3, 5], ["#ffc4ff", 9, 8, 3, 1],
+  ["#84f6a6", 14, 7, 3, 5], ["#cefcdb", 14, 8, 3, 1],
+  ["#ffd166", 19, 7, 2, 5], ["#fff4c0", 19, 8, 2, 1],
+  // Mid row vials
+  ["#ff7a3a", 4, 15, 3, 5], ["#ffb84d", 4, 16, 3, 1],
+  ["#c79bff", 9, 15, 3, 5], ["#e0c9ff", 9, 16, 3, 1],
+  ["#7bdff2", 14, 15, 2, 5],
+  ["#84f6a6", 18, 15, 3, 5]
+];
+
+export const HERB_BUNDLE_SPRITE = [
+  ["#3a2a1a", 11, 0, 2, 4],    // string
+  ["#3e6b3e", 8, 4, 8, 8],     // bundle leaves
+  ["#5a8f3d", 9, 5, 6, 6],
+  ["#7aaa5d", 10, 6, 4, 4],
+  ["#a8323e", 11, 7, 2, 1]     // berry
+];
+
+export const BOOKSHELF_SPRITE = [
+  ["#3a2a1a", 2, 0, 20, 24],   // back
+  ["#5c3a1a", 3, 1, 18, 22],   // wood
+  ["#3a2a1a", 3, 6, 18, 1],    // shelves
+  ["#3a2a1a", 3, 12, 18, 1],
+  ["#3a2a1a", 3, 18, 18, 1],
+  // Books — varied colors
+  ["#a8323e", 4, 2, 2, 4], ["#3a56a8", 6, 2, 2, 4],
+  ["#5b3a8e", 8, 2, 2, 4], ["#3e9e9e", 11, 2, 2, 4],
+  ["#ffd166", 13, 2, 2, 4], ["#5a8f3d", 15, 2, 2, 4],
+  ["#a8323e", 17, 2, 2, 4], ["#3a56a8", 19, 2, 2, 4],
+  ["#5b3a8e", 4, 8, 2, 4], ["#a8323e", 6, 8, 2, 4],
+  ["#3e9e9e", 8, 8, 2, 4], ["#ffd166", 11, 8, 2, 4],
+  ["#3a56a8", 13, 8, 2, 4], ["#5b3a8e", 15, 8, 2, 4],
+  ["#5a8f3d", 17, 8, 2, 4], ["#a8323e", 19, 8, 2, 4],
+  ["#3e9e9e", 4, 14, 2, 4], ["#5b3a8e", 6, 14, 2, 4],
+  ["#a8323e", 8, 14, 2, 4], ["#3a56a8", 11, 14, 2, 4],
+  ["#ffd166", 13, 14, 2, 4], ["#5a8f3d", 15, 14, 2, 4],
+  ["#5b3a8e", 17, 14, 2, 4], ["#3a56a8", 19, 14, 2, 4]
+];
+
+export const CRYSTAL_BALL_SPRITE = [
+  ["#3a2a1a", 7, 18, 10, 4],   // base
+  ["#5c3a1a", 8, 17, 8, 2],
+  ["#1a1a22", 6, 8, 12, 12],   // dark sphere
+  ["#3a56a8", 7, 9, 10, 10],   // glowing
+  ["#7bdff2", 9, 11, 6, 6],
+  ["#cefcdb", 10, 12, 3, 3]    // highlight
+];
+
+export const HANGING_SCROLL_SPRITE = [
+  ["#3a2a1a", 9, 0, 6, 1],     // string
+  ["#e8d8a4", 8, 1, 8, 14],    // scroll body
+  ["#7a4a2a", 8, 1, 8, 1],     // top rod
+  ["#7a4a2a", 8, 14, 8, 1],    // bottom rod
+  ["#5c3a1a", 10, 4, 1, 6],    // ink line
+  ["#5c3a1a", 12, 5, 3, 1],
+  ["#5c3a1a", 12, 8, 3, 1],
+  ["#a8323e", 11, 10, 2, 2]    // wax seal
+];
+
+export const MASK_SPRITE = [
+  ["#3a2a1a", 11, 0, 2, 4],    // hanging string
+  ["#5c3a1a", 8, 4, 8, 12],    // mask body
+  ["#1a0a08", 8, 4, 8, 1],
+  ["#fca5ff", 9, 8, 2, 2], ["#fca5ff", 13, 8, 2, 2],  // eye glints
+  ["#1a0a08", 9, 8, 2, 2], ["#1a0a08", 13, 8, 2, 2],  // eye holes
+  ["#3a2a1a", 10, 12, 4, 2]    // mouth
+];
+
+export const DISPLAY_CASE_SPRITE = [
+  ["#3a2a1a", 3, 4, 18, 18],   // frame
+  ["#1a1a22", 4, 5, 16, 16],   // dark interior
+  ["#7bdff2", 6, 8, 4, 6],     // gem 1
+  ["#cefcdb", 6, 8, 1, 6],
+  ["#fca5ff", 14, 8, 4, 6],    // gem 2
+  ["#ffc4ff", 14, 8, 1, 6],
+  ["#ffd166", 9, 16, 6, 3],    // gold pile
+  ["#fff4c0", 10, 16, 4, 1],
+  ["#5a5a64", 3, 4, 18, 1],    // top edge highlight
+  ["#3a3a44", 3, 21, 18, 1]    // bottom shadow
+];
+
+export const POTTED_PLANT_SPRITE = [
+  ["#5c3a1a", 7, 16, 10, 6],   // pot
+  ["#3a2a1a", 7, 16, 10, 1],   // rim
+  ["#3e6b3e", 4, 6, 16, 12],   // foliage
+  ["#5a8f3d", 5, 7, 14, 10],
+  ["#7aaa5d", 7, 8, 10, 6],
+  ["#84f6a6", 9, 10, 4, 3]     // highlight
+];
+
+// Decoration layouts per shop. Coordinates are relative to (x0, y0)
+// of the interior room. Renderer translates these during draw.
+// "above" decorations are drawn at the back row (y0+1).
+// "side" decorations sit on the back floor row (y0+5) on left/right.
+// "front" decorations sit near the south of the room (y0+8).
+export const SHOP_DECORATIONS = {
+  weapon: [
+    { sprite: "wallSword",  rx: 3, ry: 1 },
+    { sprite: "wallShield", rx: 6, ry: 1 },
+    { sprite: "wallSword",  rx: 9, ry: 1 },
+    { sprite: "anvil",      rx: 1, ry: 5 },
+    { sprite: "forge",      rx: 11, ry: 5 },
+    { sprite: "armorStand", rx: 1, ry: 7 },
+    { sprite: "barrel",     rx: 11, ry: 7 },
+    { sprite: "crate",      rx: 2, ry: 8 },
+    { sprite: "crate",      rx: 10, ry: 8 }
+  ],
+  alchemist: [
+    { sprite: "herbBundle", rx: 3, ry: 1 },
+    { sprite: "herbBundle", rx: 6, ry: 1 },
+    { sprite: "herbBundle", rx: 9, ry: 1 },
+    { sprite: "cauldron",   rx: 1, ry: 5 },
+    { sprite: "vialShelf",  rx: 11, ry: 5 },
+    { sprite: "pottedPlant",rx: 1, ry: 7 },
+    { sprite: "barrel",     rx: 11, ry: 7 },
+    { sprite: "crate",      rx: 2, ry: 8 },
+    { sprite: "pottedPlant",rx: 10, ry: 8 }
+  ],
+  arcanum: [
+    { sprite: "scroll",     rx: 3, ry: 1 },
+    { sprite: "scroll",     rx: 6, ry: 1 },
+    { sprite: "scroll",     rx: 9, ry: 1 },
+    { sprite: "bookshelf",  rx: 1, ry: 5 },
+    { sprite: "bookshelf",  rx: 11, ry: 5 },
+    { sprite: "crystalBall",rx: 1, ry: 7 },
+    { sprite: "crystalBall",rx: 11, ry: 7 },
+    { sprite: "pottedPlant",rx: 2, ry: 8 }
+  ],
+  curio: [
+    { sprite: "mask",        rx: 3, ry: 1 },
+    { sprite: "mask",        rx: 6, ry: 1 },
+    { sprite: "mask",        rx: 9, ry: 1 },
+    { sprite: "displayCase", rx: 1, ry: 5 },
+    { sprite: "displayCase", rx: 11, ry: 5 },
+    { sprite: "pottedPlant", rx: 1, ry: 7 },
+    { sprite: "pottedPlant", rx: 11, ry: 7 },
+    { sprite: "crate",       rx: 2, ry: 8 },
+    { sprite: "barrel",      rx: 10, ry: 8 }
+  ]
+};
+
 export const EXIT_RUG_SPRITE = [
   ["#7a3a3a", 0, 4, 24, 16],
   ["#5c2a2a", 0, 4, 24, 2],

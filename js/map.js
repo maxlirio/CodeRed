@@ -101,6 +101,7 @@ export function buildFloor() {
   state.trees = [];
   state.paths = [];
   state.fountains = [];
+  state.props = [];
   state.chests = [];
   const occupied = new Set([key(state.player.x, state.player.y), key(state.stairs.x, state.stairs.y)]);
 
@@ -207,6 +208,7 @@ export function buildShopInterior(kind) {
   state.trees = [];
   state.paths = [];
   state.fountains = [];
+  state.props = [];
   state.chests = [];
   state.floorEffects = [];
 
@@ -261,31 +263,76 @@ export function buildTown() {
   state.trees = [];
   state.paths = [];
   state.fountains = [];
+  state.props = [];
   state.chests = [];
 
-  placeBuilding("Blacksmith", 2,  2, 4, 4, 1, 3, "weapon");
-  placeBuilding("Alchemist", 22, 2, 4, 4, 1, 3, "alchemist");
+  // Town layout: a north-south main street with a central plaza,
+  // shops clustered along it instead of dropped in the four corners.
+  // Cols: 0..27, Rows: 0..17.
+
+  // North row of shops (top of map)
+  placeBuilding("Blacksmith", 4,  1, 4, 4, 1, 3, "weapon");
+  placeBuilding("Alchemist", 20, 1, 4, 4, 1, 3, "alchemist");
+  // Enchanter — small roadside stand (south-facing), tucked beside the plaza
   placeBuilding("Enchanter", 12, 2, 4, 4, 1, 3, "enchanter");
-  placeBuilding("Arcanum",    2, 13, 4, 4, 1, 0, "arcanum");
-  placeBuilding("Curios",    22, 13, 4, 4, 1, 0, "curio");
-  placeBuilding("Dungeon Entrance", 12, 13, 4, 4, 1, 0, null);
 
-  placeFountain(7, 7);
+  // South row of shops + dungeon
+  placeBuilding("Arcanum",   4, 12, 4, 4, 1, 0, "arcanum");
+  placeBuilding("Curios",   20, 12, 4, 4, 1, 0, "curio");
+  placeBuilding("Dungeon Entrance", 12, 12, 4, 4, 1, 0, null);
 
-  placeTree(7,  2); placeTree(20, 2);
-  placeTree(7, 10); placeTree(20, 10);
-  placeTree(10, 16); placeTree(17, 16);
+  // Central plaza features
+  placeFountain(13, 8);
 
-  // Paths: horizontal corridor row 10 + vertical column 14
-  for (let x = 1; x < cols - 1; x++) placePath(x, 10);
-  for (let y = 1; y < rows - 1; y++) placePath(14, y);
-  // Door stubs
-  placePath(3, 6); placePath(3, 7); placePath(3, 8); placePath(3, 9);
-  placePath(23, 6); placePath(23, 7); placePath(23, 8); placePath(23, 9);
-  placePath(13, 6); placePath(13, 7); placePath(13, 8); placePath(13, 9);
-  placePath(3, 11); placePath(3, 12);
-  placePath(23, 11); placePath(23, 12);
+  // Trees and decoration scattered like a real square
+  placeTree(2, 5);  placeTree(9,  6);  placeTree(18, 6);  placeTree(25, 5);
+  placeTree(2, 11); placeTree(9, 10);  placeTree(18, 10); placeTree(25, 11);
+  placeTree(2, 9);  placeTree(25, 9);
+
+  // Decorative props (lanterns, market stalls, signs, barrels)
+  state.props = [
+    // Lanterns flank the dungeon entrance and the main paths
+    { kind: "lantern", x: 11, y: 11 },
+    { kind: "lantern", x: 16, y: 11 },
+    { kind: "lantern", x: 8,  y: 1  },
+    { kind: "lantern", x: 19, y: 1  },
+    { kind: "lantern", x: 8,  y: 16 },
+    { kind: "lantern", x: 19, y: 16 },
+
+    // Signposts near the shops
+    { kind: "sign", x: 4, y: 6, label: "weapon"   },
+    { kind: "sign", x: 20, y: 6, label: "alchemist" },
+    { kind: "sign", x: 4, y: 11, label: "arcanum" },
+    { kind: "sign", x: 20, y: 11, label: "curio"   },
+
+    // Market clutter — barrels, crates around the plaza
+    { kind: "barrel", x: 6, y: 8 },
+    { kind: "crate",  x: 22, y: 8 },
+    { kind: "crate",  x: 5, y: 7 },
+    { kind: "barrel", x: 21, y: 7 },
+
+    // Flower patches on the plaza
+    { kind: "flowers", x: 11, y: 7 },
+    { kind: "flowers", x: 16, y: 7 },
+    { kind: "flowers", x: 11, y: 10 },
+    { kind: "flowers", x: 16, y: 10 }
+  ];
+
+  // Roads
+  // North-south main street
+  for (let y = 1; y < rows - 1; y++) { placePath(13, y); placePath(14, y); }
+  // East-west cross street through plaza row
+  for (let x = 1; x < cols - 1; x++) { placePath(x, 8); placePath(x, 9); }
+
+  // Door stubs from each building's door tile to the nearest road
+  // North shops: door is at building.y + 3 (one tile south of building)
+  // Blacksmith door (5, 4); Enchanter door (13, 5); Alchemist door (21, 4)
+  for (let y = 5; y <= 7; y++) { placePath(5, y); placePath(21, y); }
+  for (let y = 6; y <= 7; y++) { placePath(13, y); placePath(14, y); }
+  // South shops: door is at building.y (top row of building)
+  for (let y = 10; y <= 11; y++) { placePath(5, y); placePath(21, y); }
+  for (let y = 10; y <= 11; y++) { placePath(13, y); placePath(14, y); }
 
   state.player.x = 14;
-  state.player.y = 9;
+  state.player.y = 10;
 }

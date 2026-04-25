@@ -10,8 +10,41 @@ import {
   CHEST_CLOSED_SPRITE, CHEST_OPEN_SPRITE,
   SHOP_INTERIOR_PALETTES, VENDOR_SPRITES,
   COUNTER_SPRITE, SHELF_SPRITE, BANNER_SPRITE,
-  EXIT_DOOR_SPRITE, EXIT_RUG_SPRITE
+  EXIT_DOOR_SPRITE, EXIT_RUG_SPRITE,
+  SHOP_DECORATIONS,
+  ANVIL_SPRITE, ARMOR_STAND_SPRITE, WALL_SWORD_SPRITE, WALL_SHIELD_SPRITE, FORGE_SPRITE,
+  CAULDRON_SPRITE, VIAL_SHELF_SPRITE, HERB_BUNDLE_SPRITE,
+  BOOKSHELF_SPRITE, CRYSTAL_BALL_SPRITE, HANGING_SCROLL_SPRITE,
+  MASK_SPRITE, DISPLAY_CASE_SPRITE, POTTED_PLANT_SPRITE,
+  LANTERN_SPRITE, SIGNPOST_SPRITE, BARREL_SPRITE, CRATE_SPRITE, FLOWER_PATCH_SPRITE
 } from "./config.js";
+
+const DECO_SPRITES = {
+  anvil: ANVIL_SPRITE,
+  armorStand: ARMOR_STAND_SPRITE,
+  wallSword: WALL_SWORD_SPRITE,
+  wallShield: WALL_SHIELD_SPRITE,
+  forge: FORGE_SPRITE,
+  cauldron: CAULDRON_SPRITE,
+  vialShelf: VIAL_SHELF_SPRITE,
+  herbBundle: HERB_BUNDLE_SPRITE,
+  bookshelf: BOOKSHELF_SPRITE,
+  crystalBall: CRYSTAL_BALL_SPRITE,
+  scroll: HANGING_SCROLL_SPRITE,
+  mask: MASK_SPRITE,
+  displayCase: DISPLAY_CASE_SPRITE,
+  pottedPlant: POTTED_PLANT_SPRITE,
+  barrel: BARREL_SPRITE,
+  crate: CRATE_SPRITE
+};
+
+const TOWN_PROP_SPRITES = {
+  lantern: LANTERN_SPRITE,
+  sign: SIGNPOST_SPRITE,
+  barrel: BARREL_SPRITE,
+  crate: CRATE_SPRITE,
+  flowers: FLOWER_PATCH_SPRITE
+};
 import { updateUi } from "./ui.js";
 import { renderSpellAim, renderAllSpellFx } from "./spells/index.js";
 import { tickEnemies } from "./protocols.js";
@@ -195,10 +228,16 @@ function drawShopInteriorFurniture() {
   ctx.fillStyle = pal.accent;
   ctx.fillRect(bx + 22, by + 8, 4, 4);
 
-  // Shelves
-  for (const s of si.shelves) drawSprite(ctx, SHELF_SPRITE, s.x * tileSize, s.y * tileSize);
+  // Shop-specific decorations (anvil, cauldron, bookshelves, etc.)
+  const decorations = SHOP_DECORATIONS[si.kind] || [];
+  const { x0, y0 } = si.bounds;
+  for (const d of decorations) {
+    const sprite = DECO_SPRITES[d.sprite];
+    if (!sprite) continue;
+    drawSprite(ctx, sprite, (x0 + d.rx) * tileSize, (y0 + d.ry) * tileSize);
+  }
 
-  // Counter — drawn across the row
+  // Counter — drawn across the row, on top of any decorations
   for (let cx = si.counterX0; cx <= si.counterX1; cx++) {
     drawSprite(ctx, COUNTER_SPRITE, cx * tileSize, si.counterY * tileSize);
   }
@@ -224,6 +263,10 @@ function drawTownFeatures() {
   for (const b of state.buildings || []) {
     const sprite = b.shop ? BUILDING_SPRITES[b.shop] : DUNGEON_ENTRANCE_SPRITE;
     if (sprite) drawSprite(ctx, sprite, b.x * tileSize, b.y * tileSize);
+  }
+  for (const p of state.props || []) {
+    const sprite = TOWN_PROP_SPRITES[p.kind];
+    if (sprite) drawSprite(ctx, sprite, p.x * tileSize, p.y * tileSize);
   }
 }
 

@@ -56,6 +56,7 @@ export const state = {
   trees: [],
   paths: [],
   fountains: [],
+  props: [],
   chests: [],
   stairs: null,
   stairsUp: null,
