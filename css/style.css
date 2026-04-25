@@ -144,10 +144,11 @@ canvas {
 .stats strong { color: var(--amber); font-weight: normal; }
 
 .stat-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 18px;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 3px 10px;
+  align-items: baseline;
+  font-size: 12px;
 }
 
 #portrait {
@@ -243,6 +244,249 @@ canvas {
 
 .overlay.hidden { display: none; }
 .choice.hidden { display: none; }
+
+/* --- Typography helpers --- */
+
+.stat-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+.stat-chips .chip {
+  background: var(--panel-inset);
+  border: 1px solid var(--frame);
+  border-radius: 2px;
+  padding: 2px 7px;
+  font-size: 11px;
+  color: var(--ink-dim);
+  letter-spacing: 0.02em;
+}
+.stat-chips .chip b {
+  color: var(--amber);
+  font-weight: normal;
+  margin-right: 5px;
+}
+
+/* --- Spell slot cards (HUD) --- */
+
+.slot-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 4px;
+}
+.slot-card {
+  background: var(--panel-inset);
+  border: 1px solid var(--frame);
+  border-radius: 2px;
+  padding: 4px 6px;
+  min-height: 36px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 6px;
+  align-items: baseline;
+  font-size: 11px;
+}
+.slot-card.empty { opacity: 0.5; }
+.slot-card .key {
+  color: var(--ink-dim);
+  grid-row: 1 / span 2;
+  align-self: center;
+  font-weight: bold;
+}
+.slot-card .slot-name {
+  font-size: 12px;
+  line-height: 1.1;
+}
+.slot-card .slot-meta {
+  color: var(--ink-dim);
+  font-size: 10px;
+}
+.slot-card .sigil {
+  color: var(--phosphor);
+  font-size: 10px;
+  margin-left: 4px;
+}
+.slot-card.tappable {
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+.slot-card.tappable:hover { border-color: var(--frame-lit); background: #0d1812; }
+.slot-card.tappable:active { background: #0a120d; transform: scale(0.98); }
+
+.hud-row {
+  display: flex;
+  gap: 10px 14px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  font-size: 11px;
+  color: var(--ink-dim);
+}
+.hud-row .hint-kbd {
+  font-family: inherit;
+}
+.hud-row .ability-pill,
+.hud-row .arrow-pill {
+  padding: 3px 8px;
+  background: var(--panel-inset);
+  border: 1px solid var(--frame);
+  border-radius: 2px;
+  font-family: inherit;
+  font-size: 11px;
+  color: inherit;
+}
+.hud-row .arrow-pill b { color: var(--amber); font-weight: normal; margin-left: 3px; }
+.hud-row .arrow-pill.muted { color: var(--muted); }
+.hud-row .tappable {
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+.hud-row .tappable:hover { border-color: var(--frame-lit); background: #0d1812; }
+.hud-row .tappable:active { background: #0a120d; }
+.hud-row .charge-hint {
+  color: var(--muted);
+  font-size: 10px;
+  margin-left: auto;
+}
+
+/* --- Item list (relics/potions/scrolls) --- */
+
+.item-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.item-list li {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 6px;
+  padding: 3px 6px;
+  background: var(--panel-inset);
+  border: 1px solid transparent;
+  border-radius: 2px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+.item-list li.tappable {
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+.item-list li.tappable:hover { border-color: var(--frame-lit); background: #0d1812; }
+.item-list li.tappable:active { background: #0a120d; }
+.item-list li .num { color: var(--ink-dim); text-align: right; }
+.item-list li .name-desc { color: var(--ink); }
+.item-list li .name-desc .item-name { color: var(--amber); }
+.item-list li .name-desc .item-desc { color: var(--ink-dim); }
+
+.hud-empty {
+  color: var(--muted);
+  font-size: 11px;
+  font-style: italic;
+  padding: 4px 2px;
+}
+
+.hud-heading {
+  color: var(--amber);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+/* --- Tutorial overlay --- */
+
+.tutorial-body {
+  background: var(--panel);
+  border: 1px solid var(--frame-lit);
+  padding: 14px 16px;
+  width: min(100%, 560px);
+  text-align: left;
+  display: grid;
+  gap: 10px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.tutorial-section h3 {
+  margin: 0 0 4px 0;
+  color: var(--amber);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  font-weight: normal;
+  text-transform: uppercase;
+}
+.tutorial-section ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--ink-dim);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.tutorial-section li { margin-bottom: 2px; }
+.tutorial-section li kbd {
+  background: var(--key);
+  color: var(--ink);
+  padding: 0 5px;
+  border-radius: 2px;
+  border: 1px solid var(--key-lit);
+  font-family: inherit;
+  font-size: 10px;
+}
+
+/* --- Class selection polish --- */
+
+.choice .class-flavor {
+  color: var(--ink-dim);
+  font-style: italic;
+  display: block;
+  margin: 2px 0 6px 0;
+}
+.choice .class-weapon {
+  color: var(--ink);
+  font-size: 11px;
+  display: block;
+  margin-top: 4px;
+}
+.choice .class-spells {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+}
+
+/* --- Shop header --- */
+
+.shop-header-line {
+  font-size: 14px;
+  color: var(--ink);
+  letter-spacing: 0.04em;
+}
+.shop-header-line .shop-gold {
+  color: var(--ink-dim);
+  margin-left: 6px;
+}
+.shop-header-line .shop-gold b {
+  color: var(--gold);
+  font-weight: normal;
+}
+.shop-dialogue {
+  margin-top: 4px;
+  color: var(--ink-dim);
+  font-style: italic;
+  font-size: 12px;
+}
+
+/* --- Result stats --- */
+
+.result-stats.chips .chip {
+  background: var(--panel-inset);
+  border: 1px solid var(--frame);
+  padding: 3px 8px;
+  border-radius: 2px;
+  font-size: 11px;
+  color: var(--ink-dim);
+}
+.result-stats.chips .chip b { color: var(--amber); font-weight: normal; margin-right: 4px; }
 
 .mute-btn {
   position: fixed;
@@ -366,7 +610,7 @@ canvas {
   width: min(92vw, 840px);
   gap: 10px;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: flex-start;
   user-select: none;
   touch-action: manipulation;
 }
@@ -399,7 +643,12 @@ canvas {
   grid-template-columns: repeat(2, 1fr);
   gap: 4px;
   flex: 1;
-  max-width: 260px;
+  max-width: 320px;
+}
+.action-buttons .slot-btn {
+  background: #1a2d1a;
+  color: var(--phosphor);
+  font-weight: bold;
 }
 .action-buttons button {
   background: var(--key);
@@ -408,15 +657,38 @@ canvas {
   border-radius: 4px;
   font-family: inherit;
   font-size: 11px;
-  padding: 10px 6px;
-  min-height: 44px;
+  padding: 8px 6px;
+  min-height: 40px;
   cursor: pointer;
   touch-action: manipulation;
 }
+.action-buttons button.hidden { display: none; }
 .action-buttons button:active,
 .action-buttons button.lit { background: var(--key-lit); color: var(--ink); }
 
 @media (hover: none) and (pointer: coarse) {
-  .touch-controls { display: flex; }
+  .touch-controls { display: flex; flex-wrap: wrap; }
   .hint { display: none; }
+  /* On phones, give touch controls more room */
+  .action-buttons {
+    max-width: none;
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .dpad {
+    grid-template-columns: repeat(3, 52px);
+    grid-template-rows: repeat(3, 52px);
+  }
+  .slot-card { min-height: 44px; }
+  .item-list li { padding: 6px 8px; min-height: 40px; }
+  .hud-row .ability-pill,
+  .hud-row .arrow-pill { padding: 6px 10px; font-size: 12px; }
+  .charge-hint { display: none; }
+}
+
+/* Skinny phone: single column HUD */
+@media (max-width: 600px) {
+  body { padding: 8px; gap: 10px; }
+  .stats { grid-template-columns: 56px 1fr; font-size: 12px; }
+  #portrait { width: 48px !important; height: 48px !important; }
+  .slot-row { grid-template-columns: 1fr 1fr; }
 }

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Pixel Rogue</title>
-  <link rel="stylesheet" href="css/style.css?v=12" />
+  <link rel="stylesheet" href="css/style.css?v=14" />
 </head>
 <body>
   <div class="frame">
@@ -71,13 +71,69 @@
 
     <div id="tutorialOverlay" class="overlay hidden">
       <h2>HOW TO PLAY</h2>
-      <div class="result-card" style="text-align:left;">
-        <p><b style="color:var(--amber)">Goal —</b> descend 15 floors. Kill the boss on floors 5, 10, and 15 to share your run.</p>
-        <p><b style="color:var(--amber)">Move —</b> <kbd>WASD</kbd> / <kbd>←↑→↓</kbd>. Bump enemies to attack. <kbd>Space</kbd> = wait.</p>
-        <p><b style="color:var(--amber)">Cast —</b> <kbd>Z</kbd> <kbd>X</kbd> <kbd>C</kbd> <kbd>V</kbd> fire the spell in that slot. Aim spells let you click a tile. Hold <kbd>Shift</kbd> = charged (1.5× damage / cost).</p>
-        <p><b style="color:var(--amber)">Other —</b> <kbd>F</kbd> = bow shot (if equipped). <kbd>J</kbd> = weapon enchant ability (after enchanting). <kbd>B</kbd> = backpack / re-slot spells. <kbd>1</kbd>–<kbd>6</kbd> = use a relic. <kbd>+</kbd> = hide/show HUD. <kbd>N</kbd> = toggle AI enchants (Groq). <kbd>Esc</kbd> = cancel aim / close menus.</p>
-      <p><b style="color:var(--amber)">Town —</b> Walk into any side of a shop to enter. Walk to the vendor inside to buy. Walk onto the rug at the south to leave.</p>
-        <p><b style="color:var(--amber)">Mobile —</b> D-pad + action buttons below the canvas. Aim spells → tap the map tile to fire.</p>
+      <div class="tutorial-body">
+        <section class="tutorial-section">
+          <h3>Goal</h3>
+          <ul>
+            <li>Descend all 15 floors.</li>
+            <li>Bosses wait on floors 5, 10, and 15.</li>
+          </ul>
+        </section>
+
+        <section class="tutorial-section">
+          <h3>Movement</h3>
+          <ul>
+            <li><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or <kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd> — move one tile.</li>
+            <li>Walk into an enemy to melee them.</li>
+            <li><kbd>Space</kbd> — wait a turn.</li>
+          </ul>
+        </section>
+
+        <section class="tutorial-section">
+          <h3>Spells</h3>
+          <ul>
+            <li><kbd>Z</kbd> <kbd>X</kbd> <kbd>C</kbd> <kbd>V</kbd> — fire the spell in that slot.</li>
+            <li>Aim spells: click a tile to target.</li>
+            <li>Hold <kbd>Shift</kbd> (or tap CHARGED on mobile) for a 1.5× cast at 1.5× mana.</li>
+          </ul>
+        </section>
+
+        <section class="tutorial-section">
+          <h3>Weapons &amp; items</h3>
+          <ul>
+            <li><kbd>F</kbd> — bow shot (if you have a bow).</li>
+            <li><kbd>J</kbd> — weapon enchant ability (after enchanting at the stand).</li>
+            <li><kbd>1</kbd>–<kbd>6</kbd> — use a relic, potion, or sigil scroll from your bag.</li>
+            <li><kbd>B</kbd> — open backpack to swap weapons or re-slot spells.</li>
+          </ul>
+        </section>
+
+        <section class="tutorial-section">
+          <h3>Town</h3>
+          <ul>
+            <li>Walk into any side of a shop to step inside.</li>
+            <li>Walk onto the vendor to buy. Step on the south rug to leave.</li>
+          </ul>
+        </section>
+
+        <section class="tutorial-section">
+          <h3>Other</h3>
+          <ul>
+            <li><kbd>+</kbd> — hide/show the stats sidebar for a bigger view.</li>
+            <li><kbd>M</kbd> — mute/unmute the music.</li>
+            <li><kbd>N</kbd> — toggle AI enchants (Groq).</li>
+            <li><kbd>Esc</kbd> — cancel aim or close any menu.</li>
+          </ul>
+        </section>
+
+        <section class="tutorial-section">
+          <h3>Mobile</h3>
+          <ul>
+            <li>D-pad + action buttons below the canvas.</li>
+            <li>Aim spells: tap the tile you want to hit.</li>
+          </ul>
+        </section>
+      </div>
       </div>
       <button class="choice" id="closeTutorial">got it</button>
     </div>
@@ -124,15 +180,20 @@
       <button class="down" data-move="0,1" aria-label="down">▼</button>
     </div>
     <div class="action-buttons" aria-label="Actions">
-      <button data-slot="z" id="touchZ">Z slot</button>
-      <button data-slot="x" id="touchX">X slot</button>
-      <button data-slot="c" id="touchC">C slot</button>
-      <button data-slot="v" id="touchV">V slot</button>
+      <button data-slot="z" id="touchZ" class="slot-btn">Z —</button>
+      <button data-slot="x" id="touchX" class="slot-btn">X —</button>
+      <button data-slot="c" id="touchC" class="slot-btn">C —</button>
+      <button data-slot="v" id="touchV" class="slot-btn">V —</button>
+      <button data-slot="q" id="touchQ" class="slot-btn hidden">Q —</button>
+      <button data-slot="e" id="touchE" class="slot-btn hidden">E —</button>
+      <button data-action="ability" id="touchAbility" class="hidden">[J] ability</button>
+      <button data-action="bow" id="touchBow" class="hidden">bow [F]</button>
       <button data-action="charged" id="touchCharged">charged OFF</button>
       <button data-action="bag">bag</button>
+      <button data-action="cancel">cancel</button>
     </div>
   </div>
 
-  <script type="module" src="js/main.js?v=12"></script>
+  <script type="module" src="js/main.js?v=14"></script>
 </body>
 </html>

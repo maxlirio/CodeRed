@@ -42,13 +42,14 @@ export function showResult() {
   classEl.textContent = `the ${state.player.className}`;
   epitaphEl.textContent = epitaph();
   gridEl.textContent = buildGrid();
+  statsEl.className = "result-stats chips";
   statsEl.innerHTML = `
-    <span>floor <b>${state.stats.floorsCleared}/${maxFloor}</b></span>
-    <span><b>${state.stats.kills}</b> kills</span>
-    <span><b>${state.stats.bossKills}</b> bosses</span>
-    <span><b>${state.stats.spellsCast}</b> spells cast</span>
-    <span><b>${state.stats.goldEarned}g</b> earned</span>
-    <span>weapon: <b>${state.player.weapon}</b></span>
+    <span class="chip"><b>floor</b>${state.stats.floorsCleared}/${maxFloor}</span>
+    <span class="chip"><b>kills</b>${state.stats.kills}</span>
+    <span class="chip"><b>bosses</b>${state.stats.bossKills}</span>
+    <span class="chip"><b>spells</b>${state.stats.spellsCast}</span>
+    <span class="chip"><b>gold</b>${state.stats.goldEarned}g</span>
+    <span class="chip"><b>weapon</b>${state.player.weapon}</span>
   `;
   if (downloadBtn) downloadBtn.classList.toggle("hidden", !state.won);
   overlay.classList.remove("hidden");

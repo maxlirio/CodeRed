@@ -219,8 +219,8 @@ export function renderShop() {
   const dialogue = activeGreeting || (v ? pickFrom(v.greet) : "");
   activeGreeting = dialogue;
   ui.shopGold.innerHTML =
-    `${title} — Gold: ${state.player.gold}` +
-    (dialogue ? `<br><span style="color:var(--ink-dim);font-style:italic">"${dialogue}"</span>` : "");
+    `<div class="shop-header-line">${title} <span class="shop-gold"><b>${state.player.gold}g</b></span></div>` +
+    (dialogue ? `<div class="shop-dialogue">"${dialogue}"</div>` : "");
 
   ui.shopChoices.innerHTML = "";
   for (const offer of shop.offers) {

@@ -37,24 +37,52 @@ function renderSlots() {
   const augs = state.player.spellAugments || {};
   return keys.map((k) => {
     const id = slots[k];
-    if (!id) return `<span style="color:#6b6b8f">[${k.toUpperCase()}] -</span>`;
+    if (!id) {
+      return `<div class="slot-card empty" data-slot-key="${k}">
+        <span class="key">${k.toUpperCase()}</span>
+        <span class="slot-name">— empty —</span>
+        <span class="slot-meta">press B to slot</span>
+      </div>`;
+    }
     const sp = SPELL_BY_ID[id];
     const r = rankOf(id);
     const col = SCHOOL_COLORS[sp.school];
-    const sigils = (augs[id] || []).map((a) => `<span style="color:#84f6a6">·${a}</span>`).join("");
-    return `<span style="color:${col}">[${k.toUpperCase()}] ${sp.name} R${r} (${sp.cost}MP)${sigils}</span>`;
-  }).join(" · ");
+    const sigils = (augs[id] || []).map((a) => `<span class="sigil">✦ ${a}</span>`).join("");
+    return `<div class="slot-card tappable" data-slot-key="${k}">
+      <span class="key">${k.toUpperCase()}</span>
+      <span class="slot-name" style="color:${col}">${sp.name}</span>
+      <span class="slot-meta">R${r} · ${sp.cost} MP${sigils}</span>
+    </div>`;
+  }).join("");
 }
 
 function syncTouchSlotLabels() {
   const slots = state.player.spellSlots;
-  for (const k of ["z", "x", "c", "v"]) {
+  const maxSlots = state.player.maxSpellSlots || 4;
+  const allKeys = ["z", "x", "c", "v", "q", "e"];
+  for (let i = 0; i < allKeys.length; i++) {
+    const k = allKeys[i];
     const btn = document.getElementById(`touch${k.toUpperCase()}`);
     if (!btn) continue;
+    if (i >= maxSlots) { btn.classList.add("hidden"); continue; }
+    btn.classList.remove("hidden");
     const id = slots[k];
     if (!id) { btn.textContent = `${k.toUpperCase()} —`; continue; }
     const sp = SPELL_BY_ID[id];
     btn.textContent = `${k.toUpperCase()} ${sp.name.split(" ")[0]} ${sp.cost}MP`;
+  }
+  // Toggle bow and ability touch buttons based on loadout.
+  const touchBow = document.getElementById("touchBow");
+  if (touchBow) touchBow.classList.toggle("hidden", state.player.weaponType !== "bow");
+  const touchAbility = document.getElementById("touchAbility");
+  if (touchAbility) {
+    const a = state.player.weaponEnchant?.ability;
+    if (a) {
+      touchAbility.classList.remove("hidden");
+      touchAbility.textContent = `[J] ${a.name.split(" ").slice(0, 2).join(" ")} ${a.cost}MP`;
+    } else {
+      touchAbility.classList.add("hidden");
+    }
   }
 }
 
@@ -80,14 +108,38 @@ export function updateUi() {
   ui.gold.textContent = state.player.gold;
   ui.enemies.textContent = state.enemies.length;
   ui.bossStatus.textContent = state.bossAlive ? "Alive" : "Cleared";
-  ui.inventory.innerHTML = state.player.inventory.length
-    ? `Items: ${state.player.inventory.map((item, i) => `[${i + 1}] ${item.name} — ${item.desc}`).join("<br>")}`
-    : "Items: empty. Look for relics, scrolls, and potions in chests and shops.";
+  if (state.player.inventory.length) {
+    const items = state.player.inventory.map((item, i) =>
+      `<li class="tappable" data-relic-idx="${i}">
+        <span class="num">${i + 1}</span>
+        <span class="name-desc"><span class="item-name">${item.name}</span> — <span class="item-desc">${item.desc || ""}</span></span>
+      </li>`
+    ).join("");
+    ui.inventory.innerHTML = `<div class="hud-heading">Items — tap or press 1–6</div><ul class="item-list">${items}</ul>`;
+  } else {
+    ui.inventory.innerHTML = `<div class="hud-heading">Items</div><div class="hud-empty">empty — find relics, scrolls, and potions in chests and shops.</div>`;
+  }
 
   const statuses = renderPlayerStatuses();
   const ability = state.player.weaponEnchant?.ability;
-  const abilityHint = ability ? ` · <span style="color:${state.player.weaponEnchant.color}">[J] ${ability.name} (${ability.cost}MP)</span>` : "";
-  ui.spells.innerHTML = `Slots: ${renderSlots()} · Arrows: ${state.player.arrows}${abilityHint}${statuses ? ` · ${statuses}` : ""} · Shift+click = CHARGED`;
+  const abilityColor = state.player.weaponEnchant?.color || "var(--amber)";
+  const abilityHtml = ability
+    ? `<button class="ability-pill tappable" data-ability style="color:${abilityColor}">[J] ${ability.name} · ${ability.cost} MP</button>`
+    : "";
+  const isBow = state.player.weaponType === "bow";
+  const arrowsHtml = isBow
+    ? `<button class="arrow-pill tappable" data-bow>[F] Arrows: <b>${state.player.arrows}</b></button>`
+    : `<span class="arrow-pill muted">Arrows: <b>${state.player.arrows}</b></span>`;
+  ui.spells.innerHTML = `
+    <div class="hud-heading">Spells — tap or press key</div>
+    <div class="slot-row">${renderSlots()}</div>
+    <div class="hud-row">
+      ${arrowsHtml}
+      ${abilityHtml}
+      ${statuses ? `<span>${statuses}</span>` : ""}
+      <span class="charge-hint">Shift / CHARGED = 1.5×</span>
+    </div>
+  `;
   syncTouchSlotLabels();
 
   if (state.aimMode && state.mouseTile) {
@@ -109,8 +161,19 @@ export function renderClassChoices() {
       .filter(Boolean)
       .map((s) => `<span style="color:${SCHOOL_COLORS[s.school]}">${s.name}</span>`)
       .join(" · ");
-    const desc = c.desc ? `<span style="color:var(--ink-dim);font-style:italic">${c.desc}</span>` : "";
-    btn.innerHTML = `<strong>${c.name}</strong>${desc}<span>HP ${c.hp}, MP ${c.mana}, ATK ${c.atk}, Weapon ${c.weapon}</span>${starts ? `<span>${starts}</span>` : ""}`;
+    const desc = c.desc ? `<span class="class-flavor">${c.desc}</span>` : "";
+    btn.innerHTML = `
+      <strong>${c.name}</strong>
+      ${desc}
+      <span class="stat-chips">
+        <span class="chip"><b>HP</b>${c.hp}</span>
+        <span class="chip"><b>MP</b>${c.mana}</span>
+        <span class="chip"><b>ATK</b>${c.atk}</span>
+        <span class="chip"><b>SP</b>${c.spellPower}</span>
+      </span>
+      <span class="class-weapon">${c.weapon}</span>
+      ${starts ? `<span class="class-spells">${starts}</span>` : ""}
+    `;
     btn.addEventListener("click", () => {
       const heroName = heroNameInput.value.trim() || suggestName();
       chooseClass(c, { heroName });

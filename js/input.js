@@ -224,6 +224,14 @@ export function attachInput() {
   }
 }
 
+function onEscapeLike() {
+  state.aimMode = null;
+  state.backpackOpen = false;
+  ui.backpackOverlay.classList.add("hidden");
+  if (!tutorialOverlay.classList.contains("hidden")) toggleTutorial(false);
+  setMessage("Cancelled.");
+}
+
 // D-pad + action buttons for touch devices. Safe to wire on desktop too.
 export function initTouch() {
   // D-pad
@@ -234,8 +242,8 @@ export function initTouch() {
     });
   });
 
-  // Cast slot buttons
-  for (const slot of ["z", "x", "c", "v"]) {
+  // Cast slot buttons (all six possible slots)
+  for (const slot of ["z", "x", "c", "v", "q", "e"]) {
     const btn = document.getElementById(`touch${slot.toUpperCase()}`);
     if (btn) btn.addEventListener("click", () => castFromSlot(slot, { charged: touchCharged }));
   }
@@ -249,4 +257,48 @@ export function initTouch() {
   document.querySelector('.action-buttons button[data-action="bag"]')?.addEventListener("click", () => {
     if (state.started) toggleBackpack();
   });
+
+  // Bow shot (if equipped)
+  document.querySelector('.action-buttons button[data-action="bow"]')?.addEventListener("click", () => {
+    if (state.player.weaponType === "bow") {
+      state.aimMode = { kind: "ranged", name: "Bow Shot" };
+      setMessage("Aiming bow shot. Tap a tile.");
+    } else {
+      setMessage("Equip a bow to fire arrows.");
+    }
+  });
+
+  // Weapon enchant ability
+  document.querySelector('.action-buttons button[data-action="ability"]')?.addEventListener("click", () => {
+    useWeaponAbility();
+  });
+
+  // Cancel / Esc replacement
+  document.querySelector('.action-buttons button[data-action="cancel"]')?.addEventListener("click", onEscapeLike);
+
+  // HUD tap-to-use
+  if (ui.spells) {
+    ui.spells.addEventListener("click", (e) => {
+      const slotEl = e.target.closest("[data-slot-key]");
+      if (slotEl && !slotEl.classList.contains("empty")) {
+        castFromSlot(slotEl.dataset.slotKey, { charged: touchCharged });
+        return;
+      }
+      if (e.target.closest("[data-ability]")) { useWeaponAbility(); return; }
+      if (e.target.closest("[data-bow]")) {
+        if (state.player.weaponType === "bow") {
+          state.aimMode = { kind: "ranged", name: "Bow Shot" };
+          setMessage("Aiming bow shot. Tap a tile.");
+        }
+      }
+    });
+  }
+
+  if (ui.inventory) {
+    ui.inventory.addEventListener("click", (e) => {
+      const row = e.target.closest("[data-relic-idx]");
+      if (!row) return;
+      useRelic(parseInt(row.dataset.relicIdx, 10));
+    });
+  }
 }
