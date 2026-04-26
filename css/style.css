@@ -77,7 +77,10 @@ body::after {
 }
 
 /* Lift the actual game UI above the vines */
-.frame, .hud, .touch-controls { position: relative; z-index: 1; }
+.frame, .hud, .touch-controls, .mobile-status { position: relative; z-index: 1; }
+
+/* Compact mobile-only status strip (hidden on desktop) */
+.mobile-status { display: none; }
 
 @media (min-width: 900px) {
   html, body { height: 100vh; overflow: hidden; }
@@ -833,4 +836,199 @@ canvas {
   .stats { grid-template-columns: 56px 1fr; font-size: 12px; }
   #portrait { width: 48px !important; height: 48px !important; }
   .slot-row { grid-template-columns: 1fr 1fr; }
+}
+
+/* ============================================================
+   Mobile playability — keep canvas + d-pad + actions on screen.
+   Triggered by narrow viewports only, so the desktop two-column
+   layout still wins on tablets and laptops with enough room.
+   ============================================================ */
+@media (max-width: 899px) {
+  /* Stack the children of <body> in a fixed visual order:
+     1) compact status, 2) game canvas, 3) touch controls, 4) full HUD. */
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 6px;
+    min-height: 100dvh;
+  }
+  .mobile-status { order: 0; display: flex; }
+  .frame { order: 1; }
+  .touch-controls { order: 2; display: flex; }
+  .hud { order: 3; }
+
+  /* Hide the decorative vines on phones — they eat valuable horizontal
+     real estate and the canvas already has its own framed border. */
+  body::before, body::after { display: none; }
+
+  /* Shrink the mute button so it doesn't crowd the status strip corner. */
+  .mute-btn {
+    top: 4px;
+    right: 6px;
+    padding: 2px 8px;
+    font-size: 13px;
+  }
+
+  /* --- Mobile status strip --- */
+  .mobile-status {
+    width: 100%;
+    background: var(--panel);
+    border: 2px solid var(--frame);
+    border-top: 3px solid var(--frame-lit);
+    border-radius: 8px;
+    /* Right padding leaves room for the floating mute button. */
+    padding: 4px 50px 4px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 11px;
+    line-height: 1.2;
+  }
+  .mobile-status .ms-stats {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .mobile-status .ms-chip {
+    background: var(--panel-inset);
+    border: 1px solid var(--frame);
+    border-radius: 4px;
+    padding: 2px 6px;
+    color: var(--ink);
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  .mobile-status .ms-chip b {
+    font-weight: 600;
+    margin-right: 4px;
+    color: var(--ink-dim);
+  }
+  .mobile-status .ms-hp span { color: var(--health); }
+  .mobile-status .ms-mp span { color: var(--mana); }
+  .mobile-status .ms-floor span { color: var(--amber); }
+  .mobile-status .ms-gold span { color: var(--gold); }
+  .mobile-status .ms-log {
+    color: var(--phosphor);
+    font-size: 12px;
+    line-height: 1.3;
+    min-height: 1.3em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  /* --- Frame + canvas: cap height so controls are always visible --- */
+  .frame {
+    padding: 4px;
+    border-width: 3px;
+    border-radius: 8px;
+    box-shadow:
+      inset 0 0 0 1px #2a2030,
+      0 0 0 2px var(--frame-lit),
+      0 6px 0 -2px rgba(0, 0, 0, 0.4);
+    width: 100%;
+    max-width: 100%;
+  }
+  canvas {
+    display: block;
+    margin: 0 auto;
+    /* Pick the smaller of: 100% of frame content, or the width that
+       would otherwise blow past our height budget for the canvas
+       (about half the viewport so dpad+actions+status fit). */
+    width: min(100%, calc(50dvh * 672 / 432));
+    height: auto;
+    max-width: 100%;
+    aspect-ratio: 672 / 432;
+    border-width: 1px;
+  }
+
+  /* --- Touch controls: dpad on the left, action grid filling the rest --- */
+  .touch-controls {
+    display: flex;
+    width: 100%;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .dpad {
+    grid-template-columns: repeat(3, 46px);
+    grid-template-rows: repeat(3, 46px);
+    gap: 4px;
+    flex: 0 0 auto;
+  }
+  .dpad button { font-size: 18px; border-radius: 8px; }
+  .dpad .wait { font-size: 11px; }
+  .action-buttons {
+    flex: 1 1 auto;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    max-width: none;
+    align-content: flex-start;
+  }
+  .action-buttons button {
+    min-height: 36px;
+    padding: 4px 4px;
+    font-size: 11px;
+    border-radius: 6px;
+    line-height: 1.1;
+  }
+
+  /* HUD takes full width below the controls; user can scroll for details. */
+  .hud { width: 100%; }
+  .hint { display: none; }
+}
+
+/* On very narrow phones, the dpad needs to shrink another notch and we
+   collapse the HUD a bit to keep the page from feeling endless. */
+@media (max-width: 420px) {
+  .dpad {
+    grid-template-columns: repeat(3, 40px);
+    grid-template-rows: repeat(3, 40px);
+  }
+  .dpad button { font-size: 16px; }
+  .action-buttons button { font-size: 10px; min-height: 34px; }
+  .mobile-status .ms-chip { font-size: 10px; padding: 2px 5px; }
+}
+
+/* Landscape phones: lay out canvas | dpad on the left and actions on the
+   right of the canvas so the player can play without scrolling at all. */
+@media (max-height: 520px) and (orientation: landscape) and (max-width: 1100px) {
+  body {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "status status status"
+      "dpad   frame   actions";
+    gap: 4px;
+    padding: 4px;
+    min-height: 100dvh;
+    align-items: center;
+  }
+  .mobile-status { grid-area: status; }
+  .frame { grid-area: frame; align-self: center; justify-self: center; }
+  .touch-controls {
+    display: contents;
+  }
+  .touch-controls .dpad { grid-area: dpad; }
+  .touch-controls .action-buttons {
+    grid-area: actions;
+    grid-template-columns: repeat(2, minmax(86px, 1fr));
+    max-width: 220px;
+  }
+  .hud { display: none; }
+  canvas {
+    width: auto;
+    height: auto;
+    max-height: calc(100dvh - 80px);
+    max-width: 100%;
+    aspect-ratio: 672 / 432;
+  }
 }

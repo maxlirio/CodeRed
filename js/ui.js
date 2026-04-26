@@ -106,6 +106,10 @@ export function updateUi() {
   ui.atk.textContent = `${state.player.atk} (+${state.player.spellPower} spell)`;
   ui.floor.textContent = state.floor === 0 ? "Town" : state.floor;
   ui.gold.textContent = state.player.gold;
+  if (ui.msHp) ui.msHp.textContent = `${state.player.hp}/${state.player.maxHp}`;
+  if (ui.msMp) ui.msMp.textContent = `${state.player.mana}/${state.player.maxMana}`;
+  if (ui.msFloor) ui.msFloor.textContent = state.floor === 0 ? "Town" : `${state.floor}/15`;
+  if (ui.msGold) ui.msGold.textContent = state.player.gold;
   ui.enemies.textContent = state.enemies.length;
   ui.bossStatus.textContent = state.bossAlive ? "Alive" : "Cleared";
   // Quest tracker
@@ -160,7 +164,13 @@ export function updateUi() {
   syncTouchSlotLabels();
 
   if (state.aimMode && state.mouseTile) {
-    ui.narration.textContent = `Aim: ${state.aimMode.name}${state.aimMode.charged ? " (CHARGED)" : ""} — click tile ${state.mouseTile.x},${state.mouseTile.y}.`;
+    const aimText = `Aim: ${state.aimMode.name}${state.aimMode.charged ? " (CHARGED)" : ""} — tap tile ${state.mouseTile.x},${state.mouseTile.y}.`;
+    ui.narration.textContent = aimText;
+    if (ui.msLog) ui.msLog.textContent = aimText;
+  } else if (state.aimMode) {
+    const aimText = `Aim: ${state.aimMode.name}${state.aimMode.charged ? " (CHARGED)" : ""} — tap a tile to fire.`;
+    ui.narration.textContent = aimText;
+    if (ui.msLog) ui.msLog.textContent = aimText;
   }
   drawPortrait();
 }

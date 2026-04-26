@@ -29,6 +29,10 @@ export function lineTiles(x1, y1, x2, y2) {
   return tiles;
 }
 
-export function setMessage(msg) { state.message = msg; ui.log.textContent = msg; }
+export function setMessage(msg) {
+  state.message = msg;
+  ui.log.textContent = msg;
+  if (ui.msLog) ui.msLog.textContent = msg;
+}
 
 export function levelManaPool(level) { return 10 + Math.floor(level * 1.5); }
